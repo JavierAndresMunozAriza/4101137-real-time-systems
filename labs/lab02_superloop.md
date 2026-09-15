@@ -106,6 +106,9 @@ never answers, TASK 3 is missing: `main()` ran off the end and there is no loop.
 - **Evidence:** the diagram (a photo of paper is fine) with the instrumentation GPIOs marked.
 
 ### Task B — The baseline
+
+![Lab 02 hardware block diagram](img/lab02_hw.svg)
+
 - Hook the logic analyzer to the instrumentation GPIOs: Arduino **D3–D8**, in the
   task order of the table in
   [firmware/superloop/README.md](../firmware/superloop/README.md), with the flow

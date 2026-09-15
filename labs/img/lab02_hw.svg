@@ -1,0 +1,214 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 990" width="1200" height="990" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>Lab 02 hardware block diagram — NUCLEO-L476RG superloop</title>
+  <style>
+    .box { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+    .board { fill: #f6f8fa; stroke: #1f2328; stroke-width: 2; }
+    .sub { fill: #ffffff; stroke: #8c959f; stroke-width: 1.2; }
+    .strip { fill: #eaeef2; stroke: #8c959f; stroke-width: 1.2; }
+    .opt { fill: #ffffff; stroke: #6e7781; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .h1 { font-size: 22px; font-weight: 700; fill: #1f2328; }
+    .h2 { font-size: 13px; fill: #57606a; }
+    .t { font-size: 15px; font-weight: 700; fill: #1f2328; }
+    .b { font-size: 12.5px; fill: #1f2328; }
+    .m { font-size: 12.5px; fill: #57606a; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 12px; fill: #1f2328; }
+    .sig { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 12px; fill: #0969da; }
+    .w-instr { stroke: #0969da; stroke-width: 2; fill: none; }
+    .w-flow { stroke: #bc4c00; stroke-width: 2.2; fill: none; }
+    .w-usb { stroke: #8250df; stroke-width: 3; fill: none; }
+    .w-gnd { stroke: #1f2328; stroke-width: 2; fill: none; }
+    .w-opt { stroke: #6e7781; stroke-width: 2; fill: none; stroke-dasharray: 6 4; }
+    .w-int { stroke: #8c959f; stroke-width: 2; fill: none; }
+    .bus { stroke: #afb8c1; stroke-width: 8; fill: none; }
+  </style>
+  <defs>
+    <marker id="a-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0969da"/></marker>
+    <marker id="a-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#bc4c00"/></marker>
+    <marker id="a-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8250df"/></marker>
+    <marker id="a-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6e7781"/></marker>
+  </defs>
+
+  <rect width="1200" height="990" fill="#ffffff"/>
+
+  <text class="h1" x="40" y="44">Lab 02 — Superloop baseline: hardware block diagram</text>
+  <text class="h2" x="40" y="68">NUCLEO-L476RG running firmware/superloop · pin map from boards/nucleo_l476rg.overlay</text>
+
+  <!-- Host PC -->
+  <rect class="box" x="40" y="96" width="1120" height="84" rx="10"/>
+  <text class="t" x="58" y="122">Host PC</text>
+  <text class="mono" x="320" y="142" text-anchor="middle">west build · west flash</text>
+  <text class="b" x="320" y="164" text-anchor="middle">serial terminal 115200 8N1 — help · status · calib</text>
+  <text class="b" x="980" y="142" text-anchor="middle">PulseView / Logic 2</text>
+  <text class="b" x="980" y="164" text-anchor="middle">≥ 30 s capture · pulse width and period stats</text>
+
+  <!-- NUCLEO board -->
+  <rect class="board" x="40" y="230" width="560" height="530" rx="12"/>
+  <text class="t" x="58" y="256" style="font-size:16px">NUCLEO-L476RG</text>
+
+  <!-- USB links -->
+  <path class="w-usb" d="M320,184 V268" marker-start="url(#a-purple)" marker-end="url(#a-purple)"/>
+  <text class="t" x="334" y="204" style="font-size:13px">USB Mini-B</text>
+  <text class="m" x="334" y="222">SWD flash · virtual COM port</text>
+  <path class="w-usb" d="M980,326 V184" marker-end="url(#a-purple)"/>
+  <text class="t" x="994" y="250" style="font-size:13px">USB</text>
+  <text class="m" x="994" y="268">sample stream</text>
+
+  <rect class="sub" x="70" y="272" width="500" height="64" rx="6"/>
+  <text class="t" x="320" y="298" text-anchor="middle" style="font-size:14px">ST-LINK/V2-1 (on-board)</text>
+  <text class="m" x="320" y="320" text-anchor="middle">flashes over SWD · bridges USART2 to a USB virtual COM port</text>
+
+  <path class="w-int" d="M220,336 V372"/>
+  <text class="m" x="232" y="359">SWD · USART2 (TX PA2 / RX PA3)</text>
+
+  <rect class="sub" x="70" y="372" width="300" height="240" rx="6"/>
+  <text class="t" x="86" y="398">STM32L476RG</text>
+  <text class="m" x="86" y="418">Cortex-M4F · 80 MHz · ART flash cache</text>
+  <text class="b" x="86" y="448">k_timer 1 kHz → tick_isr</text>
+  <text class="b" x="86" y="470">EXTI PC7 → flow_isr</text>
+  <text class="b" x="86" y="492">USART2 → task_console</text>
+  <text class="b" x="86" y="514">GPIO → instr_* pins (D3–D8)</text>
+  <text class="b" x="86" y="536">GPIO PA5 → valve software PWM</text>
+  <text class="b" x="86" y="558">ADC1 → pressure pot (optional)</text>
+  <text class="b" x="86" y="580">I²C1 → SSD1306 (optional)</text>
+
+  <path class="bus" d="M370,510 H460"/>
+
+  <path class="w-int" d="M220,612 V640"/>
+  <rect class="sub" x="70" y="640" width="300" height="60" rx="6"/>
+  <text class="t" x="86" y="664" style="font-size:14px">LD2 · PA5 (D13)</text>
+  <text class="m" x="86" y="684">“valve” — software PWM, 50 Hz</text>
+
+  <!-- Arduino header strip -->
+  <text class="m" x="530" y="382" text-anchor="middle">Arduino header</text>
+  <rect class="strip" x="460" y="390" width="140" height="250" rx="4"/>
+  <g class="mono" text-anchor="end">
+    <text x="588" y="414">GND</text>
+    <text x="588" y="444">D3 · PB3</text>
+    <text x="588" y="474">D4 · PB5</text>
+    <text x="588" y="504">D5 · PB4</text>
+    <text x="588" y="534">D6 · PB10</text>
+    <text x="588" y="564">D7 · PA8</text>
+    <text x="588" y="594">D8 · PA9</text>
+    <text x="588" y="624">D9 · PC7</text>
+  </g>
+
+  <!-- Logic analyzer -->
+  <rect class="box" x="800" y="330" width="360" height="350" rx="10"/>
+  <text class="t" x="980" y="356" text-anchor="middle">USB logic analyzer</text>
+  <text class="m" x="980" y="376" text-anchor="middle">8 channels · 24 MHz</text>
+  <g class="mono">
+    <text x="812" y="414">GND</text>
+    <text x="812" y="444">CH0</text>
+    <text x="812" y="474">CH1</text>
+    <text x="812" y="504">CH2</text>
+    <text x="812" y="534">CH3</text>
+    <text x="812" y="564">CH4</text>
+    <text x="812" y="594">CH5</text>
+    <text x="812" y="624">CH6</text>
+    <text x="812" y="654" style="fill:#8c959f">CH7</text>
+  </g>
+  <g class="b">
+    <text x="850" y="414">common ground</text>
+    <text x="850" y="444">Sampling · hard · 1 kHz</text>
+    <text x="850" y="474">Control · hard · 10 ms</text>
+    <text x="850" y="504">Console · firm</text>
+    <text x="850" y="534">Telemetry · soft · 1 Hz</text>
+    <text x="850" y="564">Flow batch · every 100 pulses</text>
+    <text x="850" y="594">Display HMI · soft · 2 Hz</text>
+    <text x="850" y="624" style="fill:#bc4c00">Flow pulse input (ISR trigger)</text>
+    <text x="850" y="654" style="fill:#8c959f">spare</text>
+  </g>
+
+  <!-- Board → analyzer wires -->
+  <path class="w-gnd" d="M600,410 H800"/>
+  <text class="mono" x="700" y="403" text-anchor="middle">GND</text>
+
+  <g marker-end="url(#a-blue)">
+    <path class="w-instr" d="M600,440 H798"/>
+    <path class="w-instr" d="M600,470 H798"/>
+    <path class="w-instr" d="M600,500 H798"/>
+    <path class="w-instr" d="M600,530 H798"/>
+    <path class="w-instr" d="M600,560 H798"/>
+    <path class="w-instr" d="M600,590 H798"/>
+  </g>
+  <g class="sig" text-anchor="middle">
+    <text x="700" y="433">instr_samp</text>
+    <text x="700" y="463">instr_ctrl</text>
+    <text x="700" y="493">instr_cons</text>
+    <text x="700" y="523">instr_tele</text>
+    <text x="700" y="553">instr_flow</text>
+    <text x="700" y="583">instr_disp</text>
+  </g>
+  <g fill="#1f2328">
+    <rect x="596" y="406" width="8" height="8"/>
+    <rect x="596" y="436" width="8" height="8"/>
+    <rect x="596" y="466" width="8" height="8"/>
+    <rect x="596" y="496" width="8" height="8"/>
+    <rect x="596" y="526" width="8" height="8"/>
+    <rect x="596" y="556" width="8" height="8"/>
+    <rect x="596" y="586" width="8" height="8"/>
+    <rect x="596" y="616" width="8" height="8"/>
+  </g>
+
+  <!-- Flow pulse: source → D9 and CH6 -->
+  <path class="w-flow" d="M700,620 H606" marker-end="url(#a-orange)"/>
+  <path class="w-flow" d="M700,620 H798" marker-end="url(#a-orange)"/>
+  <path class="w-flow" d="M700,790 V620"/>
+  <circle cx="700" cy="620" r="4.5" fill="#bc4c00"/>
+  <text class="mono" x="652" y="613" text-anchor="middle" style="fill:#bc4c00">flow_pulse</text>
+
+  <rect class="box" x="620" y="790" width="300" height="84" rx="8" style="stroke:#bc4c00"/>
+  <text class="t" x="770" y="814" text-anchor="middle" style="font-size:14px">Flow pulse source</text>
+  <text class="b" x="770" y="836" text-anchor="middle">3.3 V square wave, or button to 3V3</text>
+  <text class="m" x="770" y="856" text-anchor="middle">rising edge → flow_isr · pull-down on D9</text>
+
+  <!-- Optional peripherals -->
+  <path class="w-opt" d="M175,808 V764" marker-end="url(#a-grey)"/>
+  <text class="m" x="187" y="792">ADC1</text>
+  <path class="w-opt" d="M465,804 V764" marker-start="url(#a-grey)" marker-end="url(#a-grey)"/>
+  <text class="m" x="477" y="792">I²C1</text>
+
+  <rect class="opt" x="40" y="810" width="270" height="120" rx="8"/>
+  <text class="t" x="56" y="834" style="font-size:14px">Pressure pot (optional)</text>
+  <text class="b" x="56" y="856">wiper → A0 (PA0) · ends → 3V3, GND</text>
+  <text class="b" x="56" y="876">A5 (PC0) tied to 3V3</text>
+  <text class="mono" x="56" y="900" style="fill:#57606a">pot_nucleo.overlay</text>
+  <text class="m" x="56" y="918">unwired → synthetic plant</text>
+
+  <rect class="opt" x="330" y="810" width="270" height="120" rx="8"/>
+  <text class="t" x="346" y="834" style="font-size:14px">SSD1306 OLED (optional)</text>
+  <text class="b" x="346" y="856">SDA → D14 (PB9) · SCL → D15 (PB8)</text>
+  <text class="b" x="346" y="876">VCC → 3V3 · GND · addr 0x3C</text>
+  <text class="mono" x="346" y="900" style="fill:#57606a">display.conf</text>
+  <text class="m" x="346" y="918">128×64 HMI, three pages</text>
+
+  <!-- Notes -->
+  <rect class="box" x="950" y="708" width="210" height="222" rx="8" style="stroke:#d0d7de"/>
+  <text class="t" x="966" y="734" style="font-size:14px">Notes</text>
+  <g class="b">
+    <text x="966" y="758">instr_* pins go high on task</text>
+    <text x="966" y="776">entry and low on exit.</text>
+    <text x="966" y="802">D3–D8 are also Morpho CN10</text>
+    <text x="966" y="820">pins 31 → 21.</text>
+    <text x="966" y="846">Board, analyzer and pulse</text>
+    <text x="966" y="864">source share one GND.</text>
+    <text x="966" y="890">Cache-off run: same wiring,</text>
+    <text x="966" y="908">build with nocache.conf.</text>
+  </g>
+
+  <!-- Legend -->
+  <g transform="translate(40,962)">
+    <path class="w-instr" d="M0,0 H34" marker-end="url(#a-blue)"/>
+    <text class="b" x="44" y="4">instrumentation output</text>
+    <path class="w-flow" d="M210,0 H244" marker-end="url(#a-orange)"/>
+    <text class="b" x="254" y="4">flow pulse input</text>
+    <path class="w-usb" d="M380,0 H414"/>
+    <text class="b" x="424" y="4">USB</text>
+    <path class="w-gnd" d="M480,0 H514"/>
+    <text class="b" x="524" y="4">GND</text>
+    <path class="w-opt" d="M580,0 H614"/>
+    <text class="b" x="624" y="4">optional (build flag)</text>
+    <rect x="780" y="-6" width="12" height="12" fill="#afb8c1"/>
+    <text class="b" x="800" y="4">on-board connection</text>
+  </g>
+</svg>
