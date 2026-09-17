@@ -22,33 +22,34 @@ the Hub can hold hard duties."*
 | Stock kernel, **under load** (`stress-ng` + traffic) | ____ | ____ |
 | PREEMPT_RT kernel, no load | ____ | ____ |
 | PREEMPT_RT kernel, under load | ____ | ____ |
+| PREEMPT_RT, under load, **powersave governor** (DFS penalty) | ____ | ____ |
 
 ## Tasks
 
 ### Task A — SBC bring-up
-- Image with a PREEMPT_RT kernel on the group's SBC (SOP-10: course-prepared image
-  or the distro's RT kernel). Verify: `uname -v` must say `PREEMPT_RT`.
+- Image with a PREEMPT_RT kernel on the group's SBC (SOP-10: course-prepared image or the distro's RT kernel). Verify: `uname -v` must say `PREEMPT_RT`.
 - **Evidence:** `uname -a` output + the group's SSH access.
 
 ### Task B — The curve that decides
-- `cyclictest -m -Sp90 -i 1000 -h 400 -D 5m` under the table's four conditions.
+- **Thermal & DFS Protocol:** Dynamic Frequency Scaling (DFS) ruins real-time guarantees. Before your official runs, lock the CPU to maximum frequency:
+  `echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor`
+- `cyclictest -m -Sp90 -i 1000 -h 400 -D 5m` under the table's first four conditions.
   Load: `stress-ng --cpu 0 --io 2` + a `ping -f` from a laptop (real traffic).
 - Plot the four histograms (the SOP ships the plotting script).
 - **Evidence:** the four histograms + the filled table.
 
-### Task C — Reading the tail
-- In the RET: where does PREEMPT_RT's max under load sit vs. the pump loop's 10 ms
-  deadline? And vs. the MCU's ~µs (week 9)? Three sentences: what this SBC can and
-  cannot promise.
+### Task C — The DFS Penalty
+- Change the governor to `powersave` (or `ondemand`) and run one more 5-minute `cyclictest` under load. 
+- Watch how CPU throttling destroys your tail latency. Log the max in row 5.
+- **Evidence:** The row 5 numbers proving why production servers lock their governors.
+
+### Task D — Reading the tail
+- In the RET: where does PREEMPT_RT's max under load sit vs. the pump loop's 10 ms deadline? And vs. the MCU's ~µs (week 9)? Three sentences: what this SBC can and cannot promise.
 - **Evidence:** the paragraph, citing the table's numbers.
 
 ## What about FreeRTOS?
 
-Change of scale, same question. On the MCU the worst case came from the small
-kernel (FreeRTOS or Zephyr: ~µs); on Linux it comes from the giant kernel
-(~tens–hundreds of µs even with RT). The Hub's architecture — what lives in Linux
-and what would force a return to an MCU — is exactly that comparison, and it's the
-final project's central ADR.
+Change of scale, same question. On the MCU the worst case came from the small kernel (FreeRTOS or Zephyr: ~µs); on Linux it comes from the giant kernel (~tens–hundreds of µs even with RT). MCUs rarely use complex dynamic frequency scaling (DFS)—they run at a fixed clock. The Hub's architecture — what lives in Linux and what would force a return to an MCU — is exactly that comparison, and it's the final project's central ADR.
 
 ## Deliverables (RET)
 
@@ -60,6 +61,6 @@ final project's central ADR.
 
 | | pts |
 |---|---|
-| **Execution** — RT kernel verified (15) · four runs with a constant protocol (25) | 40 |
-| **Evidence** — readable histograms + table (30) | 30 |
+| **Execution** — RT kernel verified (10) · runs with constant protocol & performance governor (20) · DFS penalty captured (10) | 40 |
+| **Evidence** — readable histograms + complete table (30) | 30 |
 | **Analysis** — tail read against the Hub's deadlines and against the MCU (30) | 30 |

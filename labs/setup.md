@@ -1,18 +1,13 @@
 # Pre-course setup — before week 1
 
-Work **at home, before the first class**. Week 1 only *verifies* this; if you show
-up without the environment, you lose the lab.
+Work **at home, before the first class**. Week 1 only *verifies* this; if you show up without the environment, you lose the lab.
 
 ## 1. Zephyr environment
 
 Follow Zephyr's official guide ([Getting Started](https://docs.zephyrproject.org/latest/develop/getting_started/index.html))
-on native Linux or WSL2. If you're on WSL2, I keep a tested guide:
-[wsl2-embedded-dev-setup](https://github.com/saacifuentesmu/wsl2-embedded-dev-setup)
-— its [Zephyr page](https://github.com/saacifuentesmu/wsl2-embedded-dev-setup/blob/main/platforms/zephyr.md)
-takes you all the way to a `hello_world` running on an ESP32.
+on native Linux or WSL2. If you're on WSL2, I keep a tested guide: [wsl2-embedded-dev-setup](https://github.com/saacifuentesmu/wsl2-embedded-dev-setup) — its [Zephyr page](https://github.com/saacifuentesmu/wsl2-embedded-dev-setup/blob/main/platforms/zephyr.md) takes you all the way to a `hello_world` running on an ESP32.
 
-By the end you must have: `west`, the Zephyr SDK, and a working workspace
-(`west init` + `west update`).
+By the end you must have: `west`, the Zephyr SDK, and a working workspace (`west init` + `west update`).
 
 ## 2. Build, without any hardware
 
@@ -24,9 +19,7 @@ west build -p -b native_sim samples/hello_world
 ./build/zephyr/zephyr.exe
 ```
 
-`native_sim` builds a **32-bit** binary. If this fails with
-`bits/libc-header-start.h: No such file or directory`, you are missing the 32-bit
-headers: `sudo apt install gcc-multilib g++-multilib`.
+`native_sim` builds a **32-bit** binary. If this fails with `bits/libc-header-start.h: No such file or directory`, you are missing the 32-bit headers: `sudo apt install gcc-multilib g++-multilib`.
 
 ## 3. Build for a real board
 
@@ -67,6 +60,25 @@ sudo usermod -aG dialout $USER   # log out and back in
 
 On WSL2: install `usbipd-win` on Windows to pass USB through to Linux (covered in
 the guide).
+
+## 5. (Optional) CI/CD Integration with GitHub Actions
+
+To practice the automated "evidence-first" culture used in industry, you can automate your `native_sim` builds. Create a `.github/workflows/build.yml` in your repository:
+
+name: Zephyr Build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: zephyrprojectrtos/ci:latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Initialize Zephyr workspace
+        run: |
+          west init -l .
+          west update
+      - name: Build native_sim
+        run: west build -p -b native_sim firmware/superloop
 
 ## Week-1 checklist
 
