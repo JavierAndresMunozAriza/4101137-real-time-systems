@@ -73,9 +73,10 @@ static const struct device *const disp = DEVICE_DT_GET_ANY(solomon_ssd1306);
 
 static inline void instr_set(const struct gpio_dt_spec *p, int v)
 {
-	/* TASK 1 — paste from the lab guide. Until then the analyzer sees flat lines. */
+if (p->port) {
+    gpio_pin_set_dt(p, v);
 }
-
+}
 /* ---- ISR side ------------------------------------------------------------- */
 
 /* Sampling tick: the ISR only raises a flag; the loop discovers it whenever it
@@ -85,7 +86,11 @@ static atomic_t backlog_peak; /* worst backlog seen — `status` reports it */
 
 static void tick_isr(struct k_timer *t)
 {
-	/* TASK 2 — paste from the lab guide. Until then no tick ever reaches the loop. */
+atomic_val_t backlog = atomic_inc(&ticks_pending) + 1;
+
+if (backlog > atomic_get(&backlog_peak)) {
+    atomic_set(&backlog_peak, backlog);
+}
 }
 K_TIMER_DEFINE(tick_timer, tick_isr, NULL);
 
@@ -486,6 +491,23 @@ int main(void)
 	k_timer_start(&tick_timer, K_USEC(SAMPLE_PERIOD_US),
 		      K_USEC(SAMPLE_PERIOD_US));
 
-	/* TASK 3 — paste from the lab guide. This is the superloop itself. */
+	int control_div = 0;
+
+while (1) {
+    task_console();
+    task_display();
+    task_telemetry();
+
+    if (atomic_get(&ticks_pending) > 0) {
+        atomic_dec(&ticks_pending);
+        task_sampling();
+        if (++control_div >= CONTROL_EVERY) {
+            control_div = 0;
+            task_control();
+        }
+    }
+
+    task_flow_batch();
+}
 	return 0;
 }
