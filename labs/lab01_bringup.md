@@ -1,64 +1,47 @@
-# Week 1 — Bring-up: the team, the board, the toolchain
-> **Reading:** [READINGS.md](../READINGS.md), week 1 · **Module:** 0
-> **Prerequisite:** [setup.md](setup.md) done at home.
+# Reporte de Laboratorio 01: Bring-up, Entorno y Tabla RET
 
-**From:** Eng. Samuel Cifuentes (Senior Architect) — *"Welcome to the Control
-Systems team. SoilSense already measures; now it has to **act**, and a valve that
-closes late bursts hoses. Before we talk kernels: I want everyone compiling and
-flashing without friction. This week's deliverable is a working environment."*
+## §1 Información del Equipo y Plataforma
+* **Integrantes:** Javier Andrés Muñoz Ariza
+* **Tarjeta de Desarrollo:** NUCLEO-L476RG / NUCLEO-G474RE
+* **Toolchain & RTOS:** Zephyr RTOS v3.x | West | OpenOCD | WSL2 (Ubuntu)
 
-Today: form pairs, verify each member's environment, and run code on both starter
-platforms (physical STM32C0116-DK and `native_sim`).
+---
 
-| Stakeholder | Their question | How this session answers it |
-|---|---|---|
-| **Samuel** | Can the team iterate fast? | Build→flash→monitor cycle < 1 min, demonstrated |
+## §2 Tabla de Requerimientos y Ejecución (RET) — Task Set Inicial
 
-## What you'll measure
+| Task ID | Task Name | Period ($T_i$) | Deadline ($D_i$) | Execution Time ($C_i$) | Type (H / F / S) | Description |
+| :---: | :--- | :---: | :---: | :---: | :---: | :--- |
+| **TSK-01** | Sampling Loop | $1000\ \mu\text{s}$ | $1000\ \mu\text{s}$ | **TBD** *(medido en Lab 02)* | **Hard (H)** | Muestreo periódico crítico del sistema. |
+| **TSK-02** | Control Loop | $10\text{ ms}$ | $10\text{ ms}$ | **TBD** *(medido en Lab 02)* | **Hard (H)** | Algoritmo de control de irrigación y válvulas. |
+| **TSK-03** | Flow ISR Service | Event-driven | $10\ \mu\text{s}$ | **TBD** *(medido en Lab 02)* | **Hard (H)** | Atención inmediata por interrupción de caudal. |
+| **TSK-04** | Telemetry Transmit | $100\text{ ms}$ | $100\text{ ms}$ | **TBD** *(medido en Lab 02)* | **Soft (S)** | Envío de datos síncronos/asíncronos. |
+| **TSK-05** | Console / Shell | Background | Best-effort | **TBD** | **Soft (S)** | Interfaz CLI interactiva con el usuario. |
 
-No timing yet — this week you measure the *setup*:
+*Nota: La clasificación H (Hard) requiere cumplimiento estricto del deadline; S (Soft) tolera retrasos ocasionales sin falla catastrófica.*
 
-| Check | ✓ |
-|---|---|
-| blinky runs on the pair's C0116-DK | |
-| `hello_world` runs on `native_sim` | |
-| Serial console open and echoing | |
-| Team RET created from the template | |
+---
 
-## Tasks
+## §3 Evidencias de Ejecución y Ciclo de Iteración
 
-### Task A — Cross-check the environment
-- Each member builds and flashes blinky on the C0116-DK **from their own laptop**.
-- `west build -p -b stm32c0116_dk zephyr/samples/basic/blinky && west flash`
-- **Evidence:** blinking LED, one flash per member.
-
-### Task B — Serial console
-- Flash `zephyr/samples/hello_world` and open the serial monitor (115200 8N1).
-- Change the message, rebuild, verify the full iteration cycle.
-- **Evidence:** monitor screenshot with the modified message.
-
-### Task C — Create the team RET
-- Copy [templates/ret.md](../templates/ret.md) into your team repo; fill in the
-  header and the control-loop row with the values from the
-  [scenario](../PROJECT_SCENARIO.md) (period 10 ms; `C_i` stays `____` until measured).
-- **Evidence:** link to the team repo with the RET under version control.
-
-## What about FreeRTOS?
-
-There is no `west`/devicetree equivalent: each silicon comes with its vendor SDK
-(ESP-IDF, STM32Cube, nRF Connect) and FreeRTOS ships embedded inside it. That's the
-trade-off we'll keep measuring: Zephyr pays its learning curve once and travels
-across chips; FreeRTOS is quick to learn but the environment changes with every vendor.
-
-## Deliverables (RET)
-
-- **Header + §1:** team, boards, initial Control task set (from the talk and the
-  scenario), all `C_i` as `____`.
-
-## Rubric (100 pts)
-
-| | pts |
-|---|---|
-| **Execution** — blinky per member (20) · full serial cycle (20) | 40 |
-| **Evidence** — screenshots + team repo with RET (30) | 30 |
-| **Analysis** — correct initial task set in the RET: H/F/S types well assigned (30) | 30 |
+### Task A — Blinky & Hardware Bring-up
+* **Resultado:** Verificación exitosa de compilación y flasheo sobre hardware STM32 mediante OpenOCD.
+* **Comando de compilación:**
+```text
+west build -p auto -b nucleo_l476rg zephyr/samples/basic/blinky && west flash -r openocd 
+  ```
+### Task B — Monitor Serial & Modificación de Mensaje
+* **Resultado:** Verificación del ciclo completo de iteración (modificación de código $\rightarrow$ rebuild $\rightarrow$ flash $\rightarrow$ serial monitor).
+* **Consola Serial (115200 8N1 via tio):**
+*** Booting Zephyr OS build v3.x.x ***
+```text
+ Hello World! SoilSense Bring-up verified by Javier Muñoz
+ Board: nucleo_l476rg | Iteration cycle < 1 min DEMONSTRATED.
+```
+ ## §4 Automatización e Infraestructura Out-of-Tree Desarrollada
+Como mejora técnica al proceso de Bring-up, se desarrolló un repositorio de infraestructura independiente para automatización:
+* Repositorio de automatización: JavierAndresMunozAriza/lab01_bringup
+* Aportes clave desarrollados:
+  * Out-of-Tree Workflow: Separación limpia entre el código de aplicación y el código fuente de Zephyr.
+  * Abstracción Devicetree: Uso de alias portables (led0, sw0) para ejecutar el mismo binario en STM32 y ESP32-C6.
+  * Automatización en VS Code: Integración de atajos de teclado **(.vscode/tasks.json)** para compilación y monitoreo serial automático con **tio /dev/ttyACM0**.
+  
