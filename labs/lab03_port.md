@@ -30,3 +30,7 @@ El principio clave de separación de hardware y software en Zephyr RTOS permite 
 ```bash
 # Comando ejecutado para evaluar cambios:
 git diff --stat
+
+### 3. Evidencia de Ejecución en Hardware Real
+
+![Evidencia Task A - Flasheo y Monitor Serial en ESP32-S3](img/lab03_Tarea_A.png)
