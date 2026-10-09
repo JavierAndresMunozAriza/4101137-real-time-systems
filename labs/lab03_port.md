@@ -34,3 +34,6 @@ git diff --stat
 ### 3. Evidencia de Ejecución en Hardware Real
 
 ![Evidencia Task A - Flasheo y Monitor Serial en ESP32-S3](./img/lab03_Tarea_A.png)
+adsad
+
+![Salida de datos en consola serie a 115200 baudios](./img/lab02_console.png)
