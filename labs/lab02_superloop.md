@@ -41,9 +41,9 @@
 
 #### 1. Medición con Analizador Lógico (PulseView)
 ![Medición de tiempos del Superloop y jitter en PulseView](./img/lab02_pulseview.png)
-
+#### 2. Telemetría en Tiempo Real (tio)
 ![Salida de datos en consola serie a 115200 baudios](./img/lab02_console.png)
-### Tabla de Mediciones de la Línea de Base
+## Tabla de Mediciones de la Línea de Base
 | Measurement | Your value | Reference / Description | Verifies REQ |
 | :--- | :---: | :--- | :--- |
 | **Actual sampling period (nominal 1 kHz): average** | **1000.0 µs** | Período de muestreo promedio medido en D0 | REQ-SAMP-01|
