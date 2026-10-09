@@ -27,13 +27,12 @@ Para adaptar el firmware `superloop` al ESP32-S3 sin modificar el código fuente
 ### 2. Análisis del Costo del Port (`git diff --stat`)
 El principio clave de separación de hardware y software en Zephyr RTOS permite portar aplicaciones entre arquitecturas distintas.
 
-```bash
+
 # Comando ejecutado para evaluar cambios:
 git diff --stat
 
 ### 3. Evidencia de Ejecución en Hardware Real
 
 ![Evidencia Task A - Flasheo y Monitor Serial en ESP32-S3](./img/lab03_Tarea_A.png)
-adsad
 
-![Salida de datos en consola serie a 115200 baudios](./img/lab02_console.png)
+
