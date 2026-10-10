@@ -11,10 +11,9 @@
 
 | Medición | L476RG (Semana 2) | ESP32-S3 Superloop (Task B) | ESP32-S3 Kernel Thread (Task C) |
 | :--- | :---: | :---: | :---: |
-| **Max sampling jitter (superloop)** | **1.8 µs** | __ µs | N/A |
-| **ISR → service latency** | **4.2 µs** | __ µs | __ µs |
+| **Max sampling jitter (superloop)** | **1.8 µs** | **0.3 µs** | N/A |
+| **ISR → service latency** | **4.2 µs** | **1.25 µs** | __ µs |
 | **Max sampling jitter (kernel thread)** | — | — | __ µs |
-
 ---
 
 ## §2 Task A — El Port (Devicetree en Acción)
@@ -36,3 +35,13 @@ git diff --stat
 ![Evidencia Task A - Flasheo y Monitor Serial en ESP32-S3](./img/lab03_Tarea_A.png)
 adsad
 
+## §3 Task B — ESP32-S3 Superloop Performance
+
+Se evaluó el comportamiento en tiempo real del lazo superloop portado al ESP32-S3 DevKit.
+
+### 1. Evidencia de Medición en PulseView
+![Evidencia Latencia ISR ESP32-S3](./img/lab03_latencia_ISR.png)
+
+### 2. Análisis Comparativo
+- **Latencia de Interrupción ($\text{ISR} \rightarrow \text{service}$):** Reducida de $4.2\,\mu\text{s}$ (STM32L476RG) a $1.25\,\mu\text{s}$ (ESP32-S3), debido a la mayor frecuencia de reloj (240 MHz vs 80 MHz).
+- **Jitter de Muestreo Nominal:** Se mantiene por debajo de $1\,\mu\text{s}$ en ejecución continua sin carga bloqueante.
