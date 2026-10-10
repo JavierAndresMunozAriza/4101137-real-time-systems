@@ -11,7 +11,7 @@
 
 | Medición | L476RG (Semana 2) | ESP32-S3 Superloop (Task B) | ESP32-S3 Kernel Thread (Task C) |
 | :--- | :---: | :---: | :---: |
-| **Max sampling jitter (superloop)** | **1.8 µs** | **0.3 µs** | N/A |
+| **Max sampling jitter (superloop)** | **1.8 µs** | **0.16 µs** | N/A |
 | **ISR → service latency** | **4.2 µs** | **1.25 µs** | __ µs |
 | **Max sampling jitter (kernel thread)** | — | — | __ µs |
 ---
