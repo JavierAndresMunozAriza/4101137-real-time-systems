@@ -11,9 +11,9 @@
 
 | Medición | L476RG (Semana 2) | ESP32-S3 Superloop (Task B) | ESP32-S3 Kernel Thread (Task C) |
 | :--- | :---: | :---: | :---: |
-| **Max sampling jitter (superloop)** | *(copiar valor)* | `__ µs` | N/A |
-| **ISR → service latency** | *(copiar valor)* | `__ µs` | `__ µs` |
-| **Max sampling jitter (kernel thread)** | — | — | `__ µs` |
+| **Max sampling jitter (superloop)** | **1.8 µs** | __ µs | N/A |
+| **ISR → service latency** | **4.2 µs** | __ µs | __ µs |
+| **Max sampling jitter (kernel thread)** | — | — | __ µs |
 
 ---
 
@@ -27,12 +27,12 @@ Para adaptar el firmware `superloop` al ESP32-S3 sin modificar el código fuente
 ### 2. Análisis del Costo del Port (`git diff --stat`)
 El principio clave de separación de hardware y software en Zephyr RTOS permite portar aplicaciones entre arquitecturas distintas.
 
-
+```bash
 # Comando ejecutado para evaluar cambios:
 git diff --stat
-
+```
 ### 3. Evidencia de Ejecución en Hardware Real
 
 ![Evidencia Task A - Flasheo y Monitor Serial en ESP32-S3](./img/lab03_Tarea_A.png)
-
+adsad
 
