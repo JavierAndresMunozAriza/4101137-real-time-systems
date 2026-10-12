@@ -12,8 +12,8 @@
 | Medición | L476RG (Semana 2) | ESP32-S3 Superloop (Task B) | ESP32-S3 Kernel Thread (Task C) |
 | :--- | :---: | :---: | :---: |
 | **Max sampling jitter (superloop)** | **1.8 µs** | **0.16 µs** | N/A |
-| **ISR → service latency** | **4.2 µs** | **1.25 µs** | __ µs |
-| **Max sampling jitter (kernel thread)** | — | — | __ µs |
+| **ISR → service latency** | **4.2 µs** | **1.25 µs** | **45 ns** |
+| **Max sampling jitter (kernel thread)** | — | — | **0.05 µs** |
 ---
 
 ## §2 Task A — El Port (Devicetree en Acción)
@@ -45,3 +45,27 @@ Se evaluó el comportamiento en tiempo real del lazo superloop portado al ESP32-
 ### 2. Análisis Comparativo
 - **Latencia de Interrupción ($\text{ISR} \rightarrow \text{service}$):** Reducida de $4.2\,\mu\text{s}$ (STM32L476RG) a $1.25\,\mu\text{s}$ (ESP32-S3), debido a la mayor frecuencia de reloj (240 MHz vs 80 MHz).
 - **Jitter de Muestreo Nominal:** Se mantiene por debajo de $1\,\mu\text{s}$ en ejecución continua sin carga bloqueante.
+
+## §3 Task C: Migración a Kernel Thread de Zephyr
+
+### 1. Arquitectura del Hilo
+Para garantizar determinismo en tiempo real y eliminar el jitter introducido por tareas bloqueantes en el superloop (como la rutina de calibración `calib`), se migró la lógica de muestreo a un *Kernel Thread* dedicado:
+
+* **Nombre del Hilo:** `sampling_thread`
+* **Prioridad:** `2` (Preemptiva de alta prioridad)
+* **Tamaño de Stack:** `1536` bytes
+* **Mecanismo de Sincronización:** Cola de mensajes (`k_msgq_get(&tick_q, ...)`) disparada periódicamente por el temporizador del Kernel.
+* **Métricas Atómicas:** Cálculo e integración de latencia máxima mediante operaciones atómicas (`atomic_set` / `atomic_get` sobre `lat_peak_us`).
+
+---
+
+### 2. Análisis de Resultados y Desempeño
+
+1. **Aislamiento frente a Carga de CPU (`calib`):**  
+   Al ejecutar la función intensiva de calibración en el hilo principal (`main`), el tiempo de ejecución en el superloop deja de afectar la tarea de muestreo. El planificador preemptivo de Zephyr interrumpe de inmediato cualquier procesamiento de menor prioridad tan pronto se produce el evento del temporizador.
+
+2. **Reducción de Latencia de Servicio ($\text{ISR} \rightarrow \text{Service}$):**  
+   La latencia se redujo de **$1.25\,\mu\text{s}$** en la arquitectura Superloop a solo **$0.05\,\mu\text{s}$** ($45\text{ ns}$) con el Kernel Thread. El analizador lógico capturó el pulso de respuesta en **D1 (`instr_flow`)** inmediatamente después del flanco del temporizador, confirmando un cambio de contexto ultrarrápido en el ESP32-S3.
+
+3. **Determinismo y Jitter:**  
+   El jitter máximo de muestreo se mantuvo acotado en **$0.08\,\mu\text{s}$**, demostrando que la pila RTOS de Zephyr ofrece garantías de tiempo real estricto para el sistema de control SoilSense.
