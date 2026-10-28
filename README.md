@@ -23,8 +23,8 @@ Este repositorio contiene las prácticas, arquitecturas de software e investigac
 | :---: | :--- | :---: | :---: |
 | **01** | *Bring-up: Environment, Toolchain & Board* | `[x]` Completado | [lab01_bringup.md](labs/lab01_bringup.md) |
 | **02** | *Superloop Architecture, Cache Jitter & Measurement* | `[x]` Completado | [lab02_superloop.md](labs/lab02_superloop.md) |
-| **03** | *The S3 Port and the First Thread* | `[ ]` En progreso (Task A) | [lab03_port.md](labs/lab03_port.md) |
-| **04** | *Full Migration and A/B Testing* | `[ ]` Pendiente | [lab04_ipc.md](labs/lab04_ipc.md) |
+| **03** | *The S3 Port and the First Thread* | `[x]` Completado | [lab03_port.md](labs/lab03_port.md) |
+| **04** | *Full Migration and A/B Testing* | `[x]` Completado | [lab04_ipc.md](labs/lab04_ipc.md) |
 | **05** | *Tracing & Per-Task Execution* | `[ ]` Pendiente | [labs/lab05_tracing.md](labs/lab05_tracing.md) |
 | **06** | *Schedulability Theory & RTA* | `[ ]` Pendiente | [labs/lab06_schedulability.md](labs/lab06_schedulability.md) |
 | **07** | *Priority Inversion & Priority Inheritance* | `[ ]` Pendiente | [labs/lab07_rta_inversion.md](labs/lab07_rta_inversion.md) |
