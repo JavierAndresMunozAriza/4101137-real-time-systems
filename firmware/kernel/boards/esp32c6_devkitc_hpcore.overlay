@@ -1,0 +1,60 @@
+/*
+ * ESP32-C6-DevKitC-1 pin map. Only hardware description changes; the C does not.
+ *
+ * The six instrumentation pins are consecutive on the J3 header (23 down to 18),
+ * so an 8-channel analyzer ribbon clips on in one go. Everything else stays
+ * clear of the strapping pins (4/5/8/9/15), the USB-JTAG pair (12/13), the
+ * console UART (16/17) and the SPI flash (24-30).
+ *
+ * Pressure comes from the synthetic plant until the pot is wired: build with
+ * -DEXTRA_DTC_OVERLAY_FILE=pot_esp32.overlay to read it from ADC1 instead.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	aliases {
+		led0 = &valve_out;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		valve_out: valve_out { gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>; };
+	};
+
+	instr {
+		compatible = "gpio-leds";
+		instr_samp: instr_samp { gpios = <&gpio0 18 GPIO_ACTIVE_HIGH>; };
+		instr_ctrl: instr_ctrl { gpios = <&gpio0 19 GPIO_ACTIVE_HIGH>; };
+		instr_cons: instr_cons { gpios = <&gpio0 20 GPIO_ACTIVE_HIGH>; };
+		instr_tele: instr_tele { gpios = <&gpio0 21 GPIO_ACTIVE_HIGH>; };
+		instr_flow: instr_flow { gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>; };
+		instr_disp: instr_disp { gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>; };
+	};
+
+	keys {
+		compatible = "gpio-keys";
+		flow_pulse: flow_pulse {
+			gpios = <&gpio0 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+		};
+	};
+};
+
+/* Optional SSD1306 HMI (build with -DEXTRA_CONF_FILE=display.conf).
+ * i2c0 is already enabled by the board on SDA GPIO6 / SCL GPIO7. */
+&i2c0 {
+	ssd1306: ssd1306@3c {
+		compatible = "solomon,ssd1306";
+		reg = <0x3c>;
+		width = <128>;
+		height = <64>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		prechargep = <0x22>;
+		segment-remap;
+		com-invdir;
+	};
+};

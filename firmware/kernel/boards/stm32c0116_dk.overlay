@@ -1,0 +1,80 @@
+/*
+ * STM32C0116-DK pin map — DRAFT, validate against the DIL20 silk before class.
+ * Console stays on the ST-LINK VCP (USART2, PA2/PA3) — do not reuse those pins.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	instr {
+		compatible = "gpio-leds";
+		instr_samp: instr_samp { gpios = <&gpioa 1 GPIO_ACTIVE_HIGH>; };
+		instr_ctrl: instr_ctrl { gpios = <&gpioa 4 GPIO_ACTIVE_HIGH>; };
+		instr_cons: instr_cons { gpios = <&gpioa 5 GPIO_ACTIVE_HIGH>; };
+		instr_tele: instr_tele { gpios = <&gpioa 6 GPIO_ACTIVE_HIGH>; };
+		instr_flow: instr_flow { gpios = <&gpioa 7 GPIO_ACTIVE_HIGH>; };
+		instr_disp: instr_disp { gpios = <&gpioc 14 GPIO_ACTIVE_HIGH>; };
+	};
+
+	keys {
+		compatible = "gpio-keys";
+		flow_pulse: flow_pulse {
+			gpios = <&gpiob 7 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+		};
+	};
+
+	zephyr,user {
+		/* idx 0 = joystick ladder (PA8), idx 1 = "pressure" pot (PA0) */
+		io-channels = <&adc1 8>, <&adc1 0>;
+	};
+};
+
+&adc1 {
+	status = "okay";
+	pinctrl-0 = <&adc1_in8_pa8 &adc1_in0_pa0>;
+	pinctrl-names = "default";
+	vref-mv = <3300>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel@8 {
+		reg = <8>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+	};
+	channel@0 {
+		reg = <0>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+	};
+};
+
+/* Optional SSD1306 HMI (build with -DEXTRA_CONF_FILE=display.conf).
+ * PA9/PA10 assumed for I2C1 — if only PB6/PB7 route out on this package,
+ * the valve LED and flow_pulse must move. Validate on the DK. */
+&i2c1 {
+	status = "okay";
+	pinctrl-0 = <&i2c1_scl_pa9 &i2c1_sda_pa10>;
+	pinctrl-names = "default";
+	clock-frequency = <I2C_BITRATE_FAST>;
+
+	ssd1306: ssd1306@3c {
+		compatible = "solomon,ssd1306";
+		reg = <0x3c>;
+		width = <128>;
+		height = <64>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		prechargep = <0x22>;
+		segment-remap;
+		com-invdir;
+	};
+};

@@ -1,0 +1,40 @@
+/*
+ * Real pressure input on the NUCLEO-L476RG, opt-in:
+ *   west build ... -- -DEXTRA_DTC_OVERLAY_FILE=pot_nucleo.overlay
+ *
+ * Pot wiper to A0 (PA0, ADC1_IN5), ends to 3V3 and GND. Channel 1 (A5 / PC0) is
+ * the joystick input the C0116-DK has on board; tie A5 to 3V3 here.
+ */
+
+#include <zephyr/dt-bindings/adc/adc.h>
+
+/ {
+	zephyr,user {
+		io-channels = <&adc1 1>, <&adc1 5>;
+	};
+};
+
+&adc1 {
+	pinctrl-0 = <&adc1_in1_pc0 &adc1_in5_pa0>;
+	pinctrl-names = "default";
+	vref-mv = <3300>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	channel@1 {
+		reg = <1>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+	};
+
+	channel@5 {
+		reg = <5>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+	};
+};

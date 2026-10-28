@@ -1,0 +1,19 @@
+# Reglas de Proyecto: Gentle AI (ODD) - Firmware Real-Time Systems & Hardware
+
+## Metodología Orchestrated Driven Development (ODD)
+- Opera bajo la metodología ODD (Orquestador -> Arquitecto -> Codificador).
+- **Modo Plan (Arquitecto):** Revisa el contexto, la estructura del proyecto y la memoria antes de proponer cambios. Presenta el plan técnico sin modificar código en esta fase.
+- **Modo Act (Codificador):** Ejecuta la creación/edición de archivos y comandos solo tras la aprobación del plan.
+
+## Estándares de Firmware (C / ESP32-S3 / Zephyr RTOS / FreeRTOS / Devicetree)
+- Todo el código C debe cumplir con los estándares de estilo de Linux Kernel / Zephyr RTOS.
+- Mantén aislados los drivers, abstracciones de hardware (HAL) y controladores de la lógica principal.
+- Los archivos Devicetree (`.dts`, `.overlay`) y configuraciones deben organizarse dentro de sus respectivas carpetas de firmware.
+- Ante errores de GCC/Clang/West/ESP-IDF, analiza siempre la salida completa del log de la terminal de Ubuntu en WSL2 antes de proponer soluciones.
+
+## Dominio de Hardware (Altium Designer)
+- **REGLA ESTRICTA:** NUNCA intentes modificar ni editar archivos propietarios o binarios de Altium (`.PcbDoc`, `.SchDoc`, `.PrjPcb`).
+- Para documentar cambios de hardware o listas de componentes, actualiza los archivos Markdown como `BOM.md` o añade diagramas **Mermaid** en el `README.md`.
+
+## Entorno de Ejecución (WSL2 Ubuntu)
+- Todos los comandos de compilación y control de versiones se deben ejecutar en el entorno Bash de Ubuntu (`WSL2`).

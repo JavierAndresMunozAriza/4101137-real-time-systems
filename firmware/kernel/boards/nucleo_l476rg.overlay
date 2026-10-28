@@ -1,0 +1,56 @@
+/*
+ * NUCLEO-L476RG pin map. Only hardware description changes; the C does not.
+ *
+ * The six instrumentation pins are Arduino D3-D8, which is the same unbroken
+ * run on the ST Morpho CN10 odd column (pins 31 down to 21), so the analyzer
+ * ribbon clips onto either header. Flow input is D9; the valve is the board's
+ * LD2, already aliased as led0 on PA5.
+ *
+ * Pressure comes from the synthetic plant until the pot is wired: build with
+ * -DEXTRA_DTC_OVERLAY_FILE=pot_nucleo.overlay to read it from ADC1 instead.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	instr {
+		compatible = "gpio-leds";
+		instr_samp: instr_samp { gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>; };  /* D3 */
+		instr_ctrl: instr_ctrl { gpios = <&gpiob 5 GPIO_ACTIVE_HIGH>; };  /* D4 */
+		instr_cons: instr_cons { gpios = <&gpiob 4 GPIO_ACTIVE_HIGH>; };  /* D5 */
+		instr_tele: instr_tele { gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>; }; /* D6 */
+		instr_flow: instr_flow { gpios = <&gpioa 8 GPIO_ACTIVE_HIGH>; };  /* D7 */
+		instr_disp: instr_disp { gpios = <&gpioa 9 GPIO_ACTIVE_HIGH>; };  /* D8 */
+	};
+
+	keys {
+		compatible = "gpio-keys";
+		flow_pulse: flow_pulse {
+			gpios = <&gpioc 7 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;   /* D9 */
+		};
+	};
+};
+
+/* These three claim D8/D2 (PA9/PA10) and the D5/D6 timer outputs by default;
+ * here those pins carry instrumentation. The console stays on usart2/LD1. */
+&usart1 { status = "disabled"; };
+&pwm2   { status = "disabled"; };
+&pwm3   { status = "disabled"; };
+
+/* Optional SSD1306 HMI (build with -DEXTRA_CONF_FILE=display.conf).
+ * i2c1 is already enabled by the board on SDA PB9 / SCL PB8 (D14/D15). */
+&i2c1 {
+	ssd1306: ssd1306@3c {
+		compatible = "solomon,ssd1306";
+		reg = <0x3c>;
+		width = <128>;
+		height = <64>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		prechargep = <0x22>;
+		segment-remap;
+		com-invdir;
+	};
+};
