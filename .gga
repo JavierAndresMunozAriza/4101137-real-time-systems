@@ -30,14 +30,14 @@ PROVIDER="claude"
 #   FILE_PATTERNS="*.ts,*.tsx"
 #   FILE_PATTERNS="*.py"
 #   FILE_PATTERNS="*.go,*.mod"
-FILE_PATTERNS="*.ts,*.tsx,*.js,*.jsx"
+FILE_PATTERNS="*.c,*.h,*.conf,*.overlay"
 
 # File patterns to exclude from review (comma-separated)
 # Default: none
 # Examples:
 #   EXCLUDE_PATTERNS="*.test.ts,*.spec.ts"
 #   EXCLUDE_PATTERNS="*_test.go,*.mock.ts"
-EXCLUDE_PATTERNS="*.test.ts,*.spec.ts,*.test.tsx,*.spec.tsx,*.d.ts"
+EXCLUDE_PATTERNS="build/*"
 
 # File containing code review rules
 # Default: AGENTS.md
