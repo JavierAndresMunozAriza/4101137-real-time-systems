@@ -1,0 +1,24 @@
+/*
+ * ESP32-S3-DevKitC-1 instrumentation pins for the scheduling labs.
+ * Four consecutive header pins -> channels D0..D3 of the logic analyzer.
+ *
+ *   D0 GPIO4  lab_t1   task 1 busy: first dispatch of a job -> completion
+ *   D1 GPIO5  lab_t2   task 2 busy
+ *   D2 GPIO6  lab_t3   task 3 busy
+ *   D3 GPIO7  lab_aux  Lab 06: deadline-miss latch (rises at the first miss)
+ *                      Lab 07: control task blocked waiting for the lock
+ *
+ * Console: uart0 (UART jack), 115200 8N1.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	instr {
+		compatible = "gpio-leds";
+		lab_t1: lab_t1 { gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>; };
+		lab_t2: lab_t2 { gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>; };
+		lab_t3: lab_t3 { gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>; };
+		lab_aux: lab_aux { gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>; };
+	};
+};

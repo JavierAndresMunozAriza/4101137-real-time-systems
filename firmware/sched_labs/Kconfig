@@ -1,0 +1,19 @@
+choice SCHED_LAB
+	prompt "Scheduling lab scenario"
+	default SCHED_LAB_RM
+
+config SCHED_LAB_RM
+	bool "Lab 06 Task A: three periodic tasks, rate-monotonic fixed priorities"
+
+config SCHED_LAB_EDF
+	bool "Lab 06 Task A: the same three tasks, earliest deadline first"
+	select SCHED_DEADLINE
+
+endchoice
+
+config SCHED_LAB_RUN_S
+	int "Seconds the scenario runs before it stops and prints its summary"
+	default 20
+	range 1 300
+
+source "Kconfig.zephyr"
