@@ -177,7 +177,7 @@ python3 tools/scripts/sched_sim.py tests --preset node --extra "sensor_a:<C>:<T>
 | Hiperbólico: Π = 2.280 vs 2 | ✘ falla |
 | EDF: U ≤ 1 | ✔ |
 
-Ambos tests suficientes para RM fallan, así que **no deciden**; la simulación exacta (Task A) muestra que RM efectivamente pierde `tau3`. Por eso RM no es la respuesta a U = 0.97 y EDF sí: es la lección de la figura del libro.
+Ambos tests suficientes para RM fallan, así que **no deciden**; la simulación exacta (Task A) muestra que RM efectivamente pierde `tau3`, y el RTA exacto del Lab 07 lo confirma: `python3 tools/scripts/rta.py --tasks "tau1:1:5,tau2:3:6,tau3:4:15" --unit units` converge a $R_{\tau_3}$ = 16 > $D$ = 15 unidades. Por eso RM no es la respuesta a U = 0.97 y EDF sí: es la lección de la figura del libro.
 
 > **FreeRTOS.** Solo trae prioridades fijas (no hay EDF en el kernel): Task A no es reproducible tal cual. Con U = 0.97 la respuesta profesional es rediseñar el conjunto hasta que pase el test de RM (o bajar U).
 
