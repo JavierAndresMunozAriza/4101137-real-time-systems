@@ -16,6 +16,10 @@
 		led0 = &valve_out;
 	};
 
+	chosen {
+		zephyr,tracing-uart = &usb_serial;
+	};
+
 	leds {
 		compatible = "gpio-leds";
 		valve_out: valve_out { gpios = <&gpio0 21 GPIO_ACTIVE_HIGH>; };
@@ -58,4 +62,10 @@
 		segment-remap;
 		com-invdir;
 	};
+};
+
+/* CTF trace stream: USB-Serial-JTAG (USB jack) is a second CDC-ACM port,
+ * so no external UART adapter is needed. The console stays on uart0. */
+&usb_serial {
+	status = "okay";
 };
