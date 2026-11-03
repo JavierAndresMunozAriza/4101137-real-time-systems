@@ -107,9 +107,8 @@ static void release_isr(struct k_timer *timer)
 	}
 }
 
-static void finish_job(uint32_t i, uint32_t released, uint32_t period_cyc)
+static void finish_job(uint32_t i, uint32_t released, uint32_t now, uint32_t period_cyc)
 {
-	uint32_t now = k_cycle_get_32();
 	uint32_t response = now - released;
 	atomic_val_t us = k_cyc_to_us_floor32(response);
 
@@ -128,7 +127,6 @@ static void finish_job(uint32_t i, uint32_t released, uint32_t period_cyc)
 
 	k_thread_deadline_set(k_current_get(), MAX(next, 0));
 #endif
-	atomic_dec(&stats[i].pending);
 }
 
 static void periodic_thread(void *p1, void *p2, void *p3)
@@ -137,6 +135,7 @@ static void periodic_thread(void *p1, void *p2, void *p3)
 	const struct task_def *d = &defs[i];
 	const uint32_t period_cyc = d->t_ms * CYCLES_PER_MS;
 	uint32_t released;
+	uint32_t done;
 
 	while (1) {
 		if (k_msgq_get(release_q[i], &released, K_FOREVER) != 0) {
@@ -144,8 +143,11 @@ static void periodic_thread(void *p1, void *p2, void *p3)
 		}
 		instr_set(d->pin, 1);
 		burn_ms(d->c_ms);
+		done = k_cycle_get_32();
+		/* Before the edge: a release landing now must not see this job as unfinished. */
+		atomic_dec(&stats[i].pending);
 		instr_set(d->pin, 0);
-		finish_job(i, released, period_cyc);
+		finish_job(i, released, done, period_cyc);
 	}
 }
 
