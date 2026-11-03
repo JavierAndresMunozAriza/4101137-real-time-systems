@@ -25,9 +25,9 @@ Este repositorio contiene las prácticas, arquitecturas de software e investigac
 | **02** | *Superloop Architecture, Cache Jitter & Measurement* | `[x]` Completado | [lab02_superloop.md](labs/lab02_superloop.md) |
 | **03** | *The S3 Port and the First Thread* | `[x]` Completado | [lab03_port.md](labs/lab03_port.md) |
 | **04** | *Full Migration and A/B Testing* | `[x]` Completado | [lab04_ipc.md](labs/lab04_ipc.md) |
-| **05** | *Tracing & Per-Task Execution* | `[ ]` Pendiente | [labs/lab05_tracing.md](labs/lab05_tracing.md) |
-| **06** | *Schedulability Theory & RTA* | `[ ]` Pendiente | [labs/lab06_schedulability.md](labs/lab06_schedulability.md) |
-| **07** | *Priority Inversion & Priority Inheritance* | `[ ]` Pendiente | [labs/lab07_rta_inversion.md](labs/lab07_rta_inversion.md) |
+| **05** | *Tracing & Per-Task Execution* | `[~]` Firmware e informe listos · capturas pendientes | [lab05_tracing.md](labs/lab05_tracing.md) |
+| **06** | *Schedulability Theory & RTA* | `[~]` Firmware, scripts e informe listos · capturas pendientes | [lab06_schedulability.md](labs/lab06_schedulability.md) |
+| **07** | *Priority Inversion & Priority Inheritance* | `[~]` Firmware, script RTA e informe listos · capturas pendientes | [lab07_rta_inversion.md](labs/lab07_rta_inversion.md) |
 | **08-13** | *Advanced RTOS, Preempt RT & Project Kickoff* | `[ ]` Pendiente | [labs/](labs/) |
 
 ## 📌 Destacados Técnicos (Laboratorios Completados)
@@ -42,3 +42,34 @@ Este repositorio contiene las prácticas, arquitecturas de software e investigac
 
 ### 📌 Laboratorio 03: Port a ESP32-S3 y Primer Thread (En Progreso)
 - **Task A (Portabilidad Devicetree):** Migración del firmware `superloop` al microcontrolador ESP32-S3 mediante Devicetree Overlay (`boards/esp32s3_devkitc_esp32s3_procpu.overlay`). Portabilidad lograda con **0 cambios en el código C (`main.c`)**.
+
+## 🚧 Laboratorios 05–07 (en progreso)
+
+> Los tres tienen firmware compilado, scripts reproducibles e informe en el formato del Lab 04. Las **capturas de hardware** (traza CTF, PulseView) y las **mediciones** aún no se toman: en los informes están marcadas `⏳` y las cifras *predichas* están rotuladas como tales (nada se estima como si fuera medido).
+
+### 📌 Laboratorio 05: Tracing (CTF sobre USB-Serial-JTAG)
+- **Ruta adaptada:** el SOP asume un segundo adaptador USB-UART; el nodo solo tiene la ESP32-S3, así que el stream CTF sale por el periférico **USB-Serial-JTAG** (jack USB) y la consola queda en el jack UART. Sin hardware adicional.
+- **Firmware (`firmware/kernel`):** hilos con nombre legible, estado compartido en `atomic_t`, comando `threads` con stack y **CPU % por hilo** (`CONFIG_THREAD_RUNTIME_STATS`), y `notrace.conf` para el A/B del costo del tracing (Task C).
+- **Pendiente:** traza anotada de una preemption y tabla traza-vs-GPIO.
+
+### 📌 Laboratorio 06: Schedulability
+- **Scripts (`tools/scripts/`):** `sched_sim.py` (tests de utilización Liu & Layland / hiperbólico y simulador RM vs EDF) y `loop_jitter_sim.py` (predicción del error de lazo vs jitter).
+- **Resultado calculado (simulación):** el conjunto sintético de Task A (U = 0.967) hace que **RM pierda `tau3` a los 150 ms** y que **EDF cumpla** (peor respuesta 140 ms). Ambos tests suficientes para RM fallan, así que no deciden: hace falta la simulación o el RTA exacto.
+- **Firmware:** `firmware/sched_labs` (RM y EDF con `CONFIG_SCHED_DEADLINE`, cómputo = espera activa calibrada) y, en el nodo, `CONFIG_LAB06_JITTER_MAX_MS` para inyectar jitter de actuación.
+- **Supuesto declarado:** los parámetros de la Fig. 4.13 y las tareas de Daniela no están en el repo; el conjunto de Task A es sintético y verificado por simulación.
+
+### 📌 Laboratorio 07: RTA e Inversión de Prioridad
+- **`tools/scripts/rta.py`:** recurrencia de Buttazzo (Fig. 4.17) con bloqueo $B_i$. Para el nodo (C_i del Lab 02), `control` tiene $R$ = 22.7 µs frente a su deadline de 5 ms.
+- **Escenario (predicción):** `control` con deadline de 5 ms → sin lock 1 ms · `k_mutex` con herencia ≤ 5 ms · `k_sem` como lock (inversión) ≈ 14–15 ms, fuera de deadline.
+- **ADR-002 (Proposed):** locks entre prioridades con `k_mutex`; `k_sem` solo para señalizar; presupuesto de sección crítica de 4 ms para el camino del e-stop.
+
+### 🔧 Cómo reproducir los cálculos
+
+```bash
+python3 tools/scripts/sched_sim.py sim --timeline 30      # Lab 06, Task A: RM vs EDF
+python3 tools/scripts/sched_sim.py tests --preset node    # Lab 06, Task B: U y tests
+python3 tools/scripts/loop_jitter_sim.py --sweep          # Lab 06, Task C: error vs jitter
+python3 tools/scripts/rta.py --preset lab07-pi --trace    # Lab 07: RTA con bloqueo
+```
+
+Los firmwares de los labs 06–07 se seleccionan por Kconfig (`-DCONFIG_SCHED_LAB_RM=y`, `..._EDF`, `..._NOLOCK`, `..._INVERSION`, `..._PI`); los comandos exactos están en cada informe.
