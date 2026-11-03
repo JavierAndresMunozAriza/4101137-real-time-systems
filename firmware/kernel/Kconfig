@@ -6,4 +6,14 @@ config LAB_FLASH_CACHE_OFF
 	  difference is attributable to the flash accelerator alone. Pair it with
 	  CONFIG_STM32_FLASH_PREFETCH=n to drop the prefetch buffer too.
 
+config LAB06_JITTER_MAX_MS
+	int "Lab 06 Task C: maximum artificial delay before actuating (ms)"
+	default 0
+	range 0 50
+	help
+	  Each control cycle waits a pseudo-random whole number of milliseconds in
+	  [0, N] before it writes the valve duty. 0 compiles the injection out, so
+	  the N = 0 build is the unmodified loop. The e-stop path is never delayed.
+	  Build with: west build ... -- -DCONFIG_LAB06_JITTER_MAX_MS=<N>
+
 source "Kconfig.zephyr"

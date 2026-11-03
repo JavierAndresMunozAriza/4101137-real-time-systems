@@ -73,6 +73,15 @@
 #define PI_I_LIMIT       2000
 #define PI_OUT_DIV       20
 
+/* Lab 06 Task C: artificial actuation delay, a whole number of ms in
+ * [0, JITTER_MAX_MS] drawn from a fixed-seed xorshift32, so every run replays
+ * the same delays. 0 compiles the injection out. */
+#define JITTER_MAX_MS    CONFIG_LAB06_JITTER_MAX_MS
+#define JITTER_SEED      2463534242U
+#define XORSHIFT_A       13   /* Marsaglia xorshift32 shift triple */
+#define XORSHIFT_B       17
+#define XORSHIFT_C       5
+
 /* Synthetic plant (no pot on the pressure channel): first-order lag plus noise */
 #define PLANT_START_MV   1200
 #define PLANT_GAIN       33
@@ -159,6 +168,8 @@ static atomic_t lat_peak_us;       /* worst release -> thread start */
 static atomic_t ticks_dropped;     /* ticks lost because tick_q was full */
 static atomic_t hmi_errors;        /* failed display calls */
 static atomic_t valve_errors;      /* failed valve GPIO writes */
+static atomic_t err_abs_sum;       /* sum of |setpoint - pressure| per control cycle, mV */
+static atomic_t err_cycles;        /* control cycles accumulated in err_abs_sum */
 static atomic_t flow_submit_failed; /* flow batches that could not be queued */
 
 enum page { PAGE_DASH, PAGE_FLOW, PAGE_HEALTH, PAGE_COUNT };
@@ -168,6 +179,14 @@ static atomic_t page_dirty = ATOMIC_INIT(1);
 static void request_redraw(void)
 {
 	atomic_set(&page_dirty, 1);
+}
+
+/* Restart the loop-error window (`set` starts a new step response). Not atomic
+ * as a pair: a control cycle landing between the two clears skews one sample. */
+static void loop_err_reset(void)
+{
+	atomic_clear(&err_abs_sum);
+	atomic_clear(&err_cycles);
 }
 
 /* The valve command is an actuator, not instrumentation: a failed write is
@@ -411,6 +430,19 @@ static void task_sampling(void)
 	instr_set(&instr_samp, 0);
 }
 
+#if JITTER_MAX_MS > 0
+/* Only the control thread calls it. */
+static unsigned int jitter_ms(void)
+{
+	static uint32_t x = JITTER_SEED;
+
+	x ^= x << XORSHIFT_A;
+	x ^= x >> XORSHIFT_B;
+	x ^= x << XORSHIFT_C;
+	return x % (JITTER_MAX_MS + 1U);
+}
+#endif
+
 static void task_control(void)
 {
 	instr_set(&instr_ctrl, 1);
@@ -422,7 +454,16 @@ static void task_control(void)
 		int integral = CLAMP((int)LOAD(integral_mv) + error / PI_KI_DIV,
 				     -PI_I_LIMIT, PI_I_LIMIT);
 
+		atomic_add(&err_abs_sum, abs(error));
+		atomic_inc(&err_cycles);
 		atomic_set(&integral_mv, integral);
+#if JITTER_MAX_MS > 0
+		unsigned int late_ms = jitter_ms(); /* Task C: late actuation */
+
+		if (late_ms > 0U) {
+			k_msleep(late_ms);
+		}
+#endif
 		atomic_set(&duty_pct, CLAMP((error + integral) / PI_OUT_DIV, 0, PCT_MAX));
 	}
 
@@ -567,6 +608,14 @@ static void cmd_calib(void)
 	printk("calibration done\n");
 }
 
+/* Mean |error| over the current window, mV (0 before the first control cycle). */
+static long err_cycles_avg(void)
+{
+	long n = LOAD(err_cycles);
+
+	return n > 0 ? LOAD(err_abs_sum) / n : 0;
+}
+
 static void console_handle(char *line)
 {
 	if (strcmp(line, "help") == 0) {
@@ -574,15 +623,18 @@ static void console_handle(char *line)
 	} else if (strcmp(line, "status") == 0) {
 		printk("p=%ld mV sp=%ld mV duty=%ld%% flow_x100=%ld estop=%ld "
 		       "batches=%ld backlog_peak=%ld lat_peak_us=%ld "
-		       "ticks_dropped=%ld hmi_errors=%ld valve_errors=%ld flow_submit_failed=%ld\n",
+		       "ticks_dropped=%ld hmi_errors=%ld valve_errors=%ld flow_submit_failed=%ld "
+		       "loop_err_mv=%ld jitter_max_ms=%d\n",
 		       LOAD(pressure_mv), LOAD(setpoint_mv), LOAD(duty_pct),
 		       LOAD(flow_lpm_x100), LOAD(estop), LOAD(flow_batches),
 		       LOAD(backlog_peak), LOAD(lat_peak_us), LOAD(ticks_dropped),
-		       LOAD(hmi_errors), LOAD(valve_errors), LOAD(flow_submit_failed));
+		       LOAD(hmi_errors), LOAD(valve_errors), LOAD(flow_submit_failed),
+		       err_cycles_avg(), JITTER_MAX_MS);
 	} else if (strcmp(line, "joy") == 0) {
 		printk("joystick raw: %ld mV\n", LOAD(joystick_mv));
 	} else if (strncmp(line, CMD_SET, sizeof(CMD_SET) - 1) == 0) {
 		setpoint_set(atoi(line + sizeof(CMD_SET) - 1));
+		loop_err_reset();
 		printk("setpoint = %ld mV\n", LOAD(setpoint_mv));
 	} else if (strcmp(line, "clear") == 0) {
 		estop_clear();
