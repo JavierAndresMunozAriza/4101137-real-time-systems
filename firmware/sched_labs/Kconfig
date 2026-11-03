@@ -9,6 +9,15 @@ config SCHED_LAB_EDF
 	bool "Lab 06 Task A: the same three tasks, earliest deadline first"
 	select SCHED_DEADLINE
 
+config SCHED_LAB_NOLOCK
+	bool "Lab 07 baseline: control never takes the lock"
+
+config SCHED_LAB_INVERSION
+	bool "Lab 07 Task B: a bare k_sem of 1 used as the lock (priority inversion)"
+
+config SCHED_LAB_PI
+	bool "Lab 07 Task C: a k_mutex as the lock (priority inheritance)"
+
 endchoice
 
 config SCHED_LAB_RUN_S
