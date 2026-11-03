@@ -199,8 +199,13 @@ static void setpoint_step(int delta)
 	request_redraw();
 }
 
-/* Reset the integrator *before* releasing the e-stop: control only touches the
- * integrator while the e-stop is clear, so the two never race. */
+/* Reset the integrator *before* releasing the e-stop: while the e-stop is set
+ * control never touches the integrator, so the reset cannot be overwritten.
+ * Two benign races remain, both bounded by one 10 ms control cycle:
+ *  - `clear` with the e-stop already clear can lose the reset to a control
+ *    update in flight (the integrator is clamped to +/-PI_I_LIMIT anyway);
+ *  - sampling can raise the e-stop just after control read it clear, so the
+ *    valve keeps its duty until the next control cycle. */
 static void estop_clear(void)
 {
 	atomic_set(&integral_mv, 0);
