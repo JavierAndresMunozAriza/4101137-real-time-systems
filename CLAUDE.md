@@ -6,7 +6,7 @@ hardware with a logic analyzer (PulseView). Environment: WSL2 (Ubuntu), West.
 ## Protocol rule
 
 - After the initial planning phase, STOP and ask the user to switch to
-  Sonnet 5 with `/model` before modifying any file or running a build.
+  Sonnet 5.5 with `/model` before modifying any file or running a build.
   Do not continue until the user confirms the switch.
 
 ## Active target
@@ -32,6 +32,12 @@ tio $(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null | head -n 1) -b 115200
 - Board overlay: `firmware/kernel/boards/esp32s3_devkitc_esp32s3_procpu.overlay`
 - Console is 115200 8N1 on the **UART** jack, not the USB jack.
 - Pin map and wiring: `firmware/kernel/README.md`.
+- **Lab 05 tracing (CTF):** streamed over the USB-Serial-JTAG port (**USB** jack,
+  second `/dev/ttyACM*`) via `zephyr,tracing-uart = &usb_serial`. Both USB-C
+  ports must be attached, so pick the console tty explicitly instead of
+  `head -n 1`. No probe or analyzer needed. Steps: `labs/sops/sop05_tracing.md`
+  (Route B, B2–B3). Status and next steps are in Engram topic
+  `lab05/tracing-ctf-usb-serial`.
 
 ## Hardware limits
 

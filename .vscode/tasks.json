@@ -50,7 +50,7 @@
     {
       "label": "7. Compilar para ESP32-S3",
       "type": "shell",
-      "command": "source ~/zephyrproject/zephyr/zephyr-env.sh 2>/dev/null || true; west build -p auto -b esp32s3_devkitc/esp32s3/procpu firmware/superloop",
+      "command": "source ~/zephyrproject/zephyr/zephyr-env.sh 2>/dev/null || true; west build -p auto -b esp32s3_devkitc/esp32s3/procpu firmware/kernel",
       "problemMatcher": ["$gcc"]
     },
     {
