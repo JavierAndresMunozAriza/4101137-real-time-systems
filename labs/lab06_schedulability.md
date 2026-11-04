@@ -14,9 +14,9 @@
 | Medición | Valor medido (placa) | Predicción |
 | :--- | :---: | :---: |
 | **U del conjunto sintético (3 tareas)** | 0.9667 (calculado) | diseñado a U ≈ 0.97 ✔ |
-| **Deadline miss bajo RM (¿qué tarea, cuándo?)** | ⏳ ____ | sí: `tau3`, primer job, en t = 150 ms (simulación) |
-| **Deadline miss bajo EDF** | ⏳ ____ | no: peor respuesta de `tau3` = 140 ms ≤ 150 ms (simulación) |
-| **Error del lazo con jitter inducido de 0 / 2 / 5 ms** | ⏳ ____ / ____ / ____ mV | 12.2 / 12.2 / 12.4 mV (simulación, ver §3 Task C) |
+| **Deadline miss bajo RM (¿qué tarea, cuándo?)** | **Sí: `tau3`**; D3 sube **149.997 ms** después del primer pulso de `tau1` (cursores de PulseView); 67 de 134 jobs fallan, peor respuesta 170.054 ms | sí: `tau3`, primer job, en t = 150 ms (simulación) |
+| **Deadline miss bajo EDF** | **No**: 0 fallos; peor respuesta de `tau3` = 140.103 ms; D3 se queda abajo | no: peor respuesta de `tau3` = 140 ms ≤ 150 ms (simulación) |
+| **Error del lazo con jitter inducido de 0 / 2 / 5 ms** | **12 / 12 / 12 mV** (una corrida por N, resolución 1 mV) | 12.2 / 12.2 / 12.4 mV (simulación, ver §3 Task C) |
 
 ---
 
@@ -133,9 +133,11 @@ Usar la planta sintética (sin `pot_esp32.overlay`): con el potenciómetro la pr
 
 | N (ms) | `loop_err_mv` medido | Predicción (simulación) |
 | :---: | :---: | :---: |
-| 0 | ⏳ ____ mV | 12.2 mV |
-| 2 | ⏳ ____ mV | 12.2 mV |
-| 5 | ⏳ ____ mV | 12.4 mV |
+| 0 | **12 mV** | 12.2 mV |
+| 2 | **12 mV** | 12.2 mV |
+| 5 | **12 mV** | 12.4 mV |
+
+**Medido (2026-11-04).** Una corrida por valor de N (`status` a los 10 s del escalón `set 2000`, salida entera en mV, sin FATAL), con el firmware por defecto de `firmware/kernel` (tracing activo, sin lector en el puerto USB). `status` imprimió `jitter_max_ms=0`, `2` y `5`, lo que confirma que la inyección compilada es la pedida. Los tres resultados son iguales dentro de la resolución de 1 mV y coinciden con la predicción (12.2, 12.2 y 12.4 mV): **un retardo de hasta 5 ms no degrada el lazo de forma apreciable**. No hay barrido en N ni repeticiones, así que no se puede afirmar nada más fino que ±1 mV.
 
 **Predicción (`tools/scripts/loop_jitter_sim.py --sweep`, promedio de 8 semillas de ruido, ±0.5 mV):**
 
@@ -146,7 +148,7 @@ Usar la planta sintética (sin `pot_esp32.overlay`): con el potenciómetro la pr
 
 *(Corrida de semilla única; en el promedio de 8 semillas: N=0 → 12.2, N=2 → 12.2, N=5 → 12.4, N=30 → 15.0, N=50 → 20.8 mV.)*
 
-**Lectura de la predicción (hipótesis a confirmar con la placa).** Con esta planta (constante de tiempo ≈ 64 ms) y un periodo de control de 10 ms, un retardo de hasta 5 ms **no degrada de forma apreciable** el lazo: las diferencias están dentro del ruido de la simulación. El error residual de ≈ 12 mV lo domina la zona muerta del integrador (`error/8` trunca a 0 por debajo de 8 mV: sin ruido de planta la simulación converge a ≈ 7 mV) más el ruido de ±3 mV de la planta; no es jitter. La degradación se hace visible hacia N ≈ 30 ms (+21 %) y marcada en N = 50 ms (+75 %), cuando el retardo supera la constante de tiempo de la planta y el lazo empieza a oscilar (la desviación estándar del duty sube de 1.2 % a 2.5 %). Si la medición confirma esto, la respuesta a "¿a partir de qué N deja de ser útil el lazo?" es: **N ≈ 30 ms para esta planta**, no los 2–5 ms del enunciado.
+**Lectura de la predicción (confirmada en la placa solo para N ≤ 5; la degradación hacia N ≈ 30 ms no se midió y sigue siendo predicción).** Con esta planta (constante de tiempo ≈ 64 ms) y un periodo de control de 10 ms, un retardo de hasta 5 ms **no degrada de forma apreciable** el lazo: las diferencias están dentro del ruido de la simulación. El error residual de ≈ 12 mV lo domina la zona muerta del integrador (`error/8` trunca a 0 por debajo de 8 mV: sin ruido de planta la simulación converge a ≈ 7 mV) más el ruido de ±3 mV de la planta; no es jitter. La degradación se hace visible hacia N ≈ 30 ms (+21 %) y marcada en N = 50 ms (+75 %), cuando el retardo supera la constante de tiempo de la planta y el lazo empieza a oscilar (la desviación estándar del duty sube de 1.2 % a 2.5 %). Si la medición confirma esto, la respuesta a "¿a partir de qué N deja de ser útil el lazo?" es: **N ≈ 30 ms para esta planta**, no los 2–5 ms del enunciado.
 
 > **[CAPTURA OPCIONAL]** `labs/img/lab06_taskC_ctrl_pulse.png` — `instr_ctrl` (GPIO5 del nodo `firmware/kernel`) con N = 5: el ancho del pulso de control varía entre ≈ 0 y 5 ms. Confirma que la inyección está activa.
 
@@ -213,6 +215,6 @@ Ambos tests suficientes para RM fallan, así que **no deciden**; la simulación 
 - [x] `labs/img/lab06_taskA_rm_miss.png` y `labs/img/lab06_taskA_edf_ok.png`
 - [x] Resúmenes de consola de RM y EDF pegados en §3 Task A
 - [x] Línea `burn_ms(10) took … us` pegada (calibración): 9999 µs
-- [ ] Tabla Task C con `loop_err_mv` medido para N = 0, 2, 5 y la frase final confirmada o corregida
+- [x] Tabla Task C con `loop_err_mv` medido para N = 0, 2, 5 (12 mV en los tres); la frase final se confirma para N ≤ 5 y N ≈ 30 sigue sin medirse
 - [ ] Parámetros de Daniela en §4.2 y U total
 - [ ] §1 completa
