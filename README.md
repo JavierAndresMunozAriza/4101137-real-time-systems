@@ -40,12 +40,17 @@ Este repositorio contiene las prácticas, arquitecturas de software e investigac
   - Análisis de Sobrecarga: Un comando bloqueante síncrono expandió el periodo de muestreo a 1200 µs, acumulando 6 ticks de backlog en el sistema.
 - **Requerimientos EARS:** Especificación y validación directa entre la instrumentación GPIO con analizador lógico y la rúbrica EARS (`REQ-SAMP-01`, `REQ-LAT-01`).
 
-### 📌 Laboratorio 03: Port a ESP32-S3 y Primer Thread (En Progreso)
+### 📌 Laboratorio 03: Port a ESP32-S3 y Primer Thread
 - **Task A (Portabilidad Devicetree):** Migración del firmware `superloop` al microcontrolador ESP32-S3 mediante Devicetree Overlay (`boards/esp32s3_devkitc_esp32s3_procpu.overlay`). Portabilidad lograda con **0 cambios en el código C (`main.c`)**.
 
-## 🚧 Laboratorios 05–07 (en progreso)
+### 📌 Laboratorio 04: Migración al kernel preemptivo y prueba A/B
+- **Arquitectura (ADR-001, Accepted):** el nodo pasa del superloop a hilos de Zephyr: `sampling` (prioridad 2, 1 kHz, sincronizado con `k_msgq`), el lote de flujo diferido con `k_work` y la consola en prioridad baja.
+- **Resultado A/B en el ESP32-S3:** jitter máximo de muestreo 0.16 µs (superloop) frente a **0.08 µs** (kernel); con `calib` bloqueante el superloop se degrada a más de 100 µs y el kernel sigue en **0.08 µs**.
+- **Latencia ISR → hilo:** de 1.25 µs a **0.05 µs (45 ns)**; costo del cambio de contexto ≈ 0.01 % de la CPU a 1 kHz.
 
-> Los tres tienen firmware compilado, scripts reproducibles e informe en el formato del Lab 04. El Lab 05 ya corrió en la placa (`threads` y trazas CTF); las capturas de **PulseView** del Lab 05 y las **mediciones** de los Labs 06–07 aún no se toman: en los informes están marcadas `⏳` y las cifras *predichas* están rotuladas como tales (nada se estima como si fuera medido).
+## 📌 Laboratorios 05–07
+
+> Labs 05 y 06 medidos en la placa; el 06 está completo con pendientes declarados y el 07 sigue en curso (estado de cada uno en la tabla de arriba). Lo no medido está marcado `⏳` en los informes y las cifras *predichas* están rotuladas como tales: nada se estima como si fuera medido.
 
 ### 📌 Laboratorio 05: Tracing (CTF sobre USB-Serial-JTAG)
 - **Ruta adaptada:** el SOP asume un segundo adaptador USB-UART; el nodo solo tiene la ESP32-S3, así que el stream CTF sale por el periférico **USB-Serial-JTAG** (jack USB) y la consola queda en el jack UART. Sin hardware adicional.
