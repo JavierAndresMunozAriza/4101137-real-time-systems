@@ -26,24 +26,18 @@ El firmware que está ahora en la placa es el definitivo con tracing activo.
 
 Con estos archivos relleno la latencia vista por GPIO, el jitter de muestreo de `sampling` con tracing ON y OFF, y el delta (el «precio de mirar»). Con solo D0 y D2 no se puede medir la latencia ISR→hilo, porque el firmware no tiene un pin en la ISR del tick; el informe lo dirá así.
 
-## Lab 06 — `firmware/sched_labs` (D0–D3 = GPIO4–7)
+## Lab 06 (guía oficial vigente)
+
+Cableado: `firmware/sched_labs` usa D0 a D3 = GPIO4 a 7; `firmware/kernel` usa además D4 = GPIO21 (válvula) y D5 = GPIO18 (marcador del e-stop).
 
 | Archivo | Firmware | Qué debe verse |
 | :--- | :--- | :--- |
-| `lab06_taskA_rm_miss` | RM (por defecto) | D3 sube cuando `tau3` pierde su deadline (a ≈ 150 ms) |
-| `lab06_taskA_edf_ok` | EDF (`-DCONFIG_SCHED_LAB_EDF=y`) | D3 siempre abajo |
-| `lab06_taskC_ctrl_pulse` (opcional) | `firmware/kernel` con `-DCONFIG_LAB06_JITTER_MAX_MS=5` | ancho del pulso de GPIO5 entre ≈ 0 y 5 ms |
+| `lab06_taskA_*` | `sched_labs` | Fig. 4.13 con τ1 (2, 5 ms) y τ2 (4, 7 ms): RM pierde `tau2` en t = 7 ms, EDF cumple 60 s (hoy son capturas del compañero de pareja) |
+| `lab06_taskB_nolock` / `_inversion` / `_pi` | `sched_labs` con `-DCONFIG_SCHED_LAB_NOLOCK=y` / `INVERSION=y` / `PI=y` y `RUN_S=30` | D3 plano / D3 ≈ 13 ms (inversión) / D2 = B ≈ 4 ms |
+| `lab06_taskC_estop_before` / `_after` (+ `_zoom`) | `kernel` antes y después de ADR-005 | detección (D5) → válvula baja (D4): hasta 10 ms antes, ≈ 4 µs después |
 
-Ventana ≥ 600 ms, ≥ 100 kHz, disparo en subida de D0. Para que el disparo coincida con el arranque, **tú armas y yo reseteo la placa**.
+Sesión `.sr` de cada captura de la Task C en `labs/captures/`. Procedimiento: 3 MHz, 50 M muestras, sin disparo; tú pulsas Run al leer AHORA y la placa se resetea o dispara el e-stop unos segundos después.
 
-## Lab 07 — `firmware/sched_labs` (D0–D3 = GPIO4–7)
+## Lab 07
 
-| Archivo | Firmware | Qué debe verse |
-| :--- | :--- | :--- |
-| `lab07_taskA_nolock` | `-DCONFIG_SCHED_LAB_NOLOCK=y` | `control` responde en ≈ 1 ms |
-| `lab07_taskB_inversion` | `-DCONFIG_SCHED_LAB_INVERSION=y` | inversión de prioridad: D3 (`control` bloqueado) ≈ 14 ms |
-| `lab07_taskC_pi` | `-DCONFIG_SCHED_LAB_PI=y` | con herencia de prioridad D3 ≈ 3–4 ms |
-
-Canales: D0 `control` ocupado, D1 `medium`, D2 `slow` con el lock, D3 `control` bloqueado. ≥ 100 kHz, disparo en subida de D2.
-
-Los valores esperados son **predicciones** (ver cada informe); lo que se mida las confirma o las corrige.
+La inversión de prioridad se midió como Task B del Lab 06. Falta la guía oficial del Lab 07.

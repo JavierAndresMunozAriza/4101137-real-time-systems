@@ -5,7 +5,7 @@
 >
 > Referencia: Buttazzo, *Hard Real-Time Computing Systems* (4.ª ed.), §4.5 (RTA, Fig. 4.17) y cap. 7 · Firmware: `firmware/sched_labs/` · Script: `tools/scripts/rta.py` · Placa: ESP32-S3 DevKitC.
 
-> **Estado de la evidencia:** el script RTA corre y sus salidas están abajo; el firmware compila en sus tres variantes. Las capturas del analizador y las lecturas de la placa **aún no se toman**: todo valor medido está marcado `⏳`. Los valores *predichos* salen del script y están rotulados como tales; ninguna medición se estima.
+> **Estado de la evidencia (2026-11-04):** la inversión de prioridad se midió en nuestra placa como **Task B del Lab 06** (guía oficial vigente; ver `labs/lab06_schedulability.md` §3 y §4.4): R máx de `control` = 1.013 ms sin lock, 14.037 ms con `k_sem` (301 de 301 fallos) y 4.038 ms con `k_mutex`; B = 4.024 ms; tres capturas anotadas. Los $C_i$ del ESP32-S3 también se midieron allí (§4.1). **Este informe sigue como borrador**: la guía oficial del Lab 07 no se pudo consultar (404 en el repositorio del curso), así que sus tareas y entregables no están verificados. Las filas `⏳` de abajo son las que aún no se trasladaron desde el Lab 06.
 
 ---
 
