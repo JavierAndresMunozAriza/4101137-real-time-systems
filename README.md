@@ -25,7 +25,7 @@ Este repositorio contiene las prácticas, arquitecturas de software e investigac
 | **02** | *Superloop Architecture, Cache Jitter & Measurement* | `[x]` Completado | [lab02_superloop.md](labs/lab02_superloop.md) |
 | **03** | *The S3 Port and the First Thread* | `[x]` Completado | [lab03_port.md](labs/lab03_port.md) |
 | **04** | *Full Migration and A/B Testing* | `[x]` Completado | [lab04_ipc.md](labs/lab04_ipc.md) |
-| **05** | *Tracing & Per-Task Execution* | `[~]` Firmware e informe listos · capturas pendientes | [lab05_tracing.md](labs/lab05_tracing.md) |
+| **05** | *Tracing & Per-Task Execution* | `[~]` Corrido en la placa (`threads` y trazas CTF) · capturas del analizador pendientes | [lab05_tracing.md](labs/lab05_tracing.md) |
 | **06** | *Schedulability Theory & RTA* | `[~]` Firmware, scripts e informe listos · capturas pendientes | [lab06_schedulability.md](labs/lab06_schedulability.md) |
 | **07** | *Priority Inversion & Priority Inheritance* | `[~]` Firmware, script RTA e informe listos · capturas pendientes | [lab07_rta_inversion.md](labs/lab07_rta_inversion.md) |
 | **08-13** | *Advanced RTOS, Preempt RT & Project Kickoff* | `[ ]` Pendiente | [labs/](labs/) |
@@ -45,12 +45,14 @@ Este repositorio contiene las prácticas, arquitecturas de software e investigac
 
 ## 🚧 Laboratorios 05–07 (en progreso)
 
-> Los tres tienen firmware compilado, scripts reproducibles e informe en el formato del Lab 04. Las **capturas de hardware** (traza CTF, PulseView) y las **mediciones** aún no se toman: en los informes están marcadas `⏳` y las cifras *predichas* están rotuladas como tales (nada se estima como si fuera medido).
+> Los tres tienen firmware compilado, scripts reproducibles e informe en el formato del Lab 04. El Lab 05 ya corrió en la placa (`threads` y trazas CTF); las capturas de **PulseView** del Lab 05 y las **mediciones** de los Labs 06–07 aún no se toman: en los informes están marcadas `⏳` y las cifras *predichas* están rotuladas como tales (nada se estima como si fuera medido).
 
 ### 📌 Laboratorio 05: Tracing (CTF sobre USB-Serial-JTAG)
 - **Ruta adaptada:** el SOP asume un segundo adaptador USB-UART; el nodo solo tiene la ESP32-S3, así que el stream CTF sale por el periférico **USB-Serial-JTAG** (jack USB) y la consola queda en el jack UART. Sin hardware adicional.
 - **Firmware (`firmware/kernel`):** hilos con nombre legible, estado compartido en `atomic_t`, comando `threads` con stack y **CPU % por hilo** (`CONFIG_THREAD_RUNTIME_STATS`), y `notrace.conf` para el A/B del costo del tracing (Task C).
-- **Pendiente:** traza anotada de una preemption y tabla traza-vs-GPIO.
+- **Primera ejecución en hardware:** el firmware se caía a los ~2 s (stack de `thread_analyzer` desbordado con tracing); corregido y verificado. `babeltrace2 2.1.2` aborta con este `metadata`, así que la traza se decodifica con `tools/scripts/ctf_decode.py`.
+- **Hallazgos medidos:** la traza es una muestra con pérdidas (≈ 1.8 % de los ticks, ≈ 4.8 KB/s), su reloj se envuelve cada 76.86 s y `tracing_thread` consume el 39 % de la CPU. La preemption de `console` durante `calib` no quedó registrada.
+- **Pendiente (analizador lógico):** latencia por GPIO (D0/D1) y el A/B del jitter con tracing ON/OFF.
 
 ### 📌 Laboratorio 06: Schedulability
 - **Scripts (`tools/scripts/`):** `sched_sim.py` (tests de utilización Liu & Layland / hiperbólico y simulador RM vs EDF) y `loop_jitter_sim.py` (predicción del error de lazo vs jitter).
@@ -70,6 +72,8 @@ python3 tools/scripts/sched_sim.py sim --timeline 30      # Lab 06, Task A: RM v
 python3 tools/scripts/sched_sim.py tests --preset node    # Lab 06, Task B: U y tests
 python3 tools/scripts/loop_jitter_sim.py --sweep          # Lab 06, Task C: error vs jitter
 python3 tools/scripts/rta.py --preset lab07-pi --trace    # Lab 07: RTA con bloqueo
+python3 tools/scripts/ctf_decode.py $ZEPHYR_BASE/subsys/tracing/ctf/tsdl/metadata channel0_0 > trace.txt   # Lab 05: traza CTF
+python3 tools/scripts/ctf_preempt_stats.py trace.txt      # Lab 05: despertares de sampling (t0..t3)
 ```
 
 Los firmwares de los labs 06–07 se seleccionan por Kconfig (`-DCONFIG_SCHED_LAB_RM=y`, `..._EDF`, `..._NOLOCK`, `..._INVERSION`, `..._PI`); los comandos exactos están en cada informe.
