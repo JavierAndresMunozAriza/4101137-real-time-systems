@@ -77,17 +77,42 @@ west flash -r esp32
 PulseView: canales D0–D3, ≥ 100 kHz, ventana ≥ 600 ms (2 hiperperiodos), disparo en el flanco de subida de D0 justo después del reset. Consola (UART, 115200) al terminar los 20 s:
 
 ```text
-⏳ PEGAR AQUÍ el resumen real de RM  (esperado: "deadline missed: YES")
-⏳ PEGAR AQUÍ el resumen real de EDF (esperado: "deadline missed: no")
+-- RM (medido en la placa) --
+sched_labs: Lab 06 Task A — rate-monotonic
+burn_ms(10) took 9999 us with nothing else running
+task   C[ms]  T[ms]   jobs  misses  dropped   worst[ms]
+tau1      10     50    402       0        0      10.016
+tau2      30     60    335       0        0      40.016
+tau3      40    150    134      67        0     170.054
+deadline missed: YES
+scenario finished (0)
+
+-- EDF (medido en la placa) --
+sched_labs: Lab 06 Task A — EDF (SCHED_DEADLINE)
+burn_ms(10) took 9999 us with nothing else running
+task   C[ms]  T[ms]   jobs  misses  dropped   worst[ms]
+tau1      10     50    402       0        0      40.087
+tau2      30     60    335       0        0      40.067
+tau3      40    150    134       0        0     140.103
+deadline missed: no
+scenario finished (0)
 ```
 
-> **[CAPTURA PENDIENTE]** `labs/img/lab06_taskA_rm_miss.png` — el miss bajo RM (D3 sube cuando `tau3` pierde su deadline).
-> <!-- ![Task A — miss bajo RM](./img/lab06_taskA_rm_miss.png) -->
->
-> **[CAPTURA PENDIENTE]** `labs/img/lab06_taskA_edf_ok.png` — el mismo conjunto bajo EDF, D3 siempre abajo.
-> <!-- ![Task A — EDF cumple](./img/lab06_taskA_edf_ok.png) -->
+El resumen de RM se obtuvo dos veces (dos corridas de 20 s) con resultado idéntico.
 
-**Verificación de la calibración:** `main` imprime `burn_ms(10) took ____ us with nothing else running`; debe ser ≈ 10 000 µs. Si se desvía, los $C_i$ efectivos no son los de la tabla.
+![Task A — miss bajo RM](./img/lab06_taskA_rm_miss.png)
+
+PulseView (Saleae Logic, 3 MHz, 50 M muestras, sin disparo; reset de la placa por RTS ≈ 8 s después de pulsar Run). Los cursores miden **149.997 ms** desde el primer pulso de `tau1` (D0, +9646 ms) hasta la subida de D3 (+9796 ms), que se queda arriba: el primer deadline perdido de `tau3`, a ≈ 150 ms como predijo la simulación. Los bloques anchos de D0–D3 antes de ≈ +9508 ms no son tareas: es el estado de los pines durante el arranque; en ≈ +9508 ms los cuatro bajan a la vez, que es lo que hace `instr_init()` (inferencia a partir del código, no medida aparte). La lectura de los cursores es de la imagen; no se exportó el VCD.
+
+La peor respuesta medida de `tau3` (170.054 ms) es mayor que los 160 ms de la RTA exacta para el primer trabajo: se debe, probablemente, al retraso acumulado de los trabajos posteriores, hipótesis que no se verificó con los datos de la captura.
+
+Bajo EDF el mismo conjunto cumple todos los deadlines: 0 fallos y la peor respuesta de `tau3` es **140.103 ms**, igual que los 140 ms de la simulación y por debajo de su deadline de 150 ms. Para `tau1` y `tau2` la peor respuesta sube respecto a RM (40.087 y 40.067 ms frente a 10.016 y 40.016 ms), porque EDF ya no les da prioridad fija; siguen dentro de sus deadlines.
+
+![Task A — EDF cumple](./img/lab06_taskA_edf_ok.png)
+
+PulseView con la misma configuración que RM (3 MHz, 50 M muestras, reset por RTS ≈ 8 s después de Run). El arranque, donde los cuatro canales bajan a la vez, queda en ≈ +5.6 s; desde ahí D0, D1 y D2 pulsan con regularidad y **D3 se queda abajo** en todo el tramo visible (≈ 4.5 s), sin la subida que en RM ocurría a ≈ 150 ms. El bloque alto de D3 al inicio es el estado de los pines durante el arranque, como en la captura de RM.
+
+**Verificación de la calibración:** `main` imprime `burn_ms(10) took 9999 us with nothing else running` (medido); debe ser ≈ 10 000 µs, y lo es. Si se desvía, los $C_i$ efectivos no son los de la tabla.
 
 ### Task C — Jitter vs. control (el puente a teoría de control)
 
@@ -185,9 +210,9 @@ Ambos tests suficientes para RM fallan, así que **no deciden**; la simulación 
 
 ## §5 Checklist de evidencia pendiente
 
-- [ ] `labs/img/lab06_taskA_rm_miss.png` y `labs/img/lab06_taskA_edf_ok.png`
-- [ ] Resúmenes de consola de RM y EDF pegados en §3 Task A
-- [ ] Línea `burn_ms(10) took … us` pegada (calibración)
+- [x] `labs/img/lab06_taskA_rm_miss.png` y `labs/img/lab06_taskA_edf_ok.png`
+- [x] Resúmenes de consola de RM y EDF pegados en §3 Task A
+- [x] Línea `burn_ms(10) took … us` pegada (calibración): 9999 µs
 - [ ] Tabla Task C con `loop_err_mv` medido para N = 0, 2, 5 y la frase final confirmada o corregida
 - [ ] Parámetros de Daniela en §4.2 y U total
 - [ ] §1 completa
