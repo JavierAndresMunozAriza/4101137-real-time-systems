@@ -5,14 +5,24 @@
 >
 > Referencia: Buttazzo, *Hard Real-Time Computing Systems* (4.ª ed.), cap. 4 · Firmware: `firmware/sched_labs/` y `firmware/kernel/` · Scripts: `tools/scripts/` · Placa: ESP32-S3 DevKitC.
 
-> **Estado de la evidencia (2026-11-04):** el firmware corre en la placa en RM y EDF, y están medidos la Task A (consola y capturas de PulseView) y la Task C (`loop_err_mv` para N = 0, 2 y 5). **Quedan pendientes** solo los parámetros de los sensores de Daniela (§4.2) y el U total. Los valores *predichos* siguen rotulados como tales; ninguna cifra medida se estima.
+> **Estado de la evidencia (2026-11-04):** la guía oficial vigente (repositorio del curso) pide la Task A con el conjunto real de la Fig. 4.13, la Task B (inversión de prioridad, tres capturas) y la Task C (ADR-005: `calib` y e-stop). **Task B medida en nuestra placa** (consola y tres capturas de PulseView). **Task A**: las capturas son del compañero de pareja (WaveForms); en nuestra placa se midió además un conjunto sintético de tres tareas. **Task C (ADR-005) pendiente.** El jitter inyectado (stretch, no calificado) está medido. Los valores *predichos* siguen rotulados como tales; ninguna cifra medida se estima.
 
 ---
 
 ## §1 Tabla de Mediciones ("What You'll Measure")
 
-| Medición | Valor medido (placa) | Predicción |
+| Medición | Predicción | Medido |
 | :--- | :---: | :---: |
+| **Fig. 4.13 bajo RM: ¿qué tarea falla y cuándo?** | `tau2`, primer trabajo, en t = 7 ms (simulación, §3 Task A) | `tau2` falla en t = 7 ms y su pulso termina en 8 ms, **según el compañero de pareja** (WaveForms, captura sin anotar); no repetido en nuestra placa con este conjunto |
+| **Fig. 4.13 bajo EDF: fallos en 60 s** | 0 (U = 0.971 ≤ 1) | 0 en 60 s, **según el compañero de pareja**; no verificado por nosotros |
+| **R máx de `control`: sin contención / inversión (`k_sem`) / `k_mutex`** | 1 ms / ≈ 14 ms (cota 15) / ≤ 5 ms (esperado ≈ 4) | **1.013 ms / 14.037 ms (301 de 301 fallos) / 4.038 ms (0 fallos)**, consola de nuestra placa |
+| **B: sección crítica más larga de `slow`** | 4 ms | **4.024 ms** (ancho de D2 con `k_mutex`, cursores de PulseView, y consola) |
+| **`calib`: CPU y duración, antes y después del arreglo** | ⏳ | ⏳ (Task C, pendiente) |
+| **E-stop: detección → válvula baja, máx de 5 disparos, antes y después** | ⏳ | ⏳ (Task C, pendiente) |
+
+**Extras medidos (no son parte de la guía oficial):** conjunto sintético de tres tareas (U = 0.9667): RM pierde `tau3` a los 149.997 ms y EDF cumple; error del lazo con jitter inducido de 0 / 2 / 5 ms = 12 / 12 / 12 mV (stretch no calificado).
+
+--- | :---: | :---: |
 | **U del conjunto sintético (3 tareas)** | 0.9667 (calculado) | diseñado a U ≈ 0.97 ✔ |
 | **Deadline miss bajo RM (¿qué tarea, cuándo?)** | **Sí: `tau3`**; D3 sube **149.997 ms** después del primer pulso de `tau1` (cursores de PulseView); 67 de 134 jobs fallan, peor respuesta 170.054 ms | sí: `tau3`, primer job, en t = 150 ms (simulación) |
 | **Deadline miss bajo EDF** | **No**: 0 fallos; peor respuesta de `tau3` = 140.103 ms; D3 se queda abajo | no: peor respuesta de `tau3` = 140 ms ≤ 150 ms (simulación) |
@@ -22,8 +32,7 @@
 
 ## §2 Supuestos y decisiones
 
-* **Parámetros de la Fig. 4.13.** Los periodos y cómputos del libro **no están en este repositorio**. Se usa un conjunto sintético de 3 tareas, de utilización similar (U = 0.967), cuyo comportamiento se **verificó por simulación**: RM falla y EDF cumple. Si la figura del libro trae otros números, se cambian en una sola tabla (`firmware/sched_labs/src/lab06.c` y el argumento `--tasks` de `sched_sim.py`).
-* **Escala.** 1 unidad de tiempo del libro = 10 ms en la placa, para que los pulsos se vean con holgura en PulseView y el tick de 1 ms no distorsione.
+* **Parámetros de la Fig. 4.13.** La guía oficial los da: τ1 (C = 2 ms, T = 5 ms) y τ2 (C = 4 ms, T = 7 ms), U = 0.971. Una versión anterior de la guía, la del repositorio, no los traía; con ella se hizo un conjunto sintético de tres tareas que se conserva como extra (§3). Escala del conjunto sintético: 1 unidad del libro = 10 ms.
 * **Parámetros de Daniela.** Las dos tareas nuevas "se dan en clase" y no están en el repo: §4 deja el cálculo parametrizado y calcula cuánta utilización caben, sin inventar sus valores.
 * **$C_i$ del nodo.** Los únicos $C_i$ registrados son los de la Semana 2 (L476RG, analizador lógico + PulseView). Los del ESP32-S3 se re-miden en el Lab 05.
 
@@ -32,6 +41,33 @@
 ## §3 Week-6 Evidence
 
 ### Task A — Fig. 4.13, en vivo
+
+#### Conjunto oficial: τ1 (C = 2 ms, T = 5 ms) y τ2 (C = 4 ms, T = 7 ms)
+
+**Predicción** (`python3 tools/scripts/sched_sim.py sim --tasks "2:5,4:7" --timeline 20`, 1 carácter = 1 ms, U = 0.9714, hiperperiodo 35 ms):
+
+```text
+--- RM ---
+DEADLINE MISS: tau2 job 1 released at t=0, deadline t=7, still has work left at t=7
+tau1  ##...##.............
+tau2  ..###...............
+
+--- EDF ---
+no miss over 35 units
+worst response (completed jobs): {'tau1': 4, 'tau2': 6}
+```
+
+`tau2` recibe CPU en [2,5), `tau1` lo desaloja en t = 5 y `tau2` no termina hasta t = 8: pierde su deadline de 7 ms. Bajo EDF ambas cumplen (respuestas máximas 4 y 6 ms). Los tests suficientes no deciden este conjunto (Liu & Layland 0.8284 y hiperbólico 2.2 fallan), pero EDF sí lo respalda (U ≤ 1).
+
+**Evidencia.** Estas dos capturas **no son nuestras**: las tomó el compañero de pareja con su firmware y con WaveForms (Digilent, 100 MHz, 100 M muestras, DIO0 = `tau1`, DIO1 = `tau2`); se incluyen atribuidas a él. Son capturas de pantalla sin anotar (sin cursores). Los resultados que reporta en su informe son: RM, `tau2` falla en t = 7 ms con el pulso extendido hasta 8 ms; EDF, 0 fallos en 60 s. No los repetimos en nuestra placa con este conjunto.
+
+![Task A — RM, miss de tau2 (captura del compañero)](./img/lab06_taskA_rm_fig413.png)
+
+![Task A — EDF, sin miss (captura del compañero)](./img/lab06_taskA_edf_fig413.png)
+
+**Pendiente:** el firmware de este repositorio (`firmware/sched_labs`) implementa el conjunto sintético de abajo, no este. Para que el código del repositorio coincida con la evidencia de la Fig. 4.13 hace falta adaptarlo a τ1/τ2 y repetir las dos capturas y el run de 60 s de EDF.
+
+#### Extra: conjunto sintético de tres tareas, medido en nuestra placa
 
 **Conjunto de tareas** (implementado en `firmware/sched_labs/src/lab06.c`, "cómputo" = espera activa calibrada `burn_ms`):
 
@@ -100,21 +136,64 @@ scenario finished (0)
 
 El resumen de RM se obtuvo dos veces (dos corridas de 20 s) con resultado idéntico.
 
-![Task A — miss bajo RM](./img/lab06_taskA_rm_miss.png)
-
-PulseView (Saleae Logic, 3 MHz, 50 M muestras, sin disparo; reset de la placa por RTS ≈ 8 s después de pulsar Run). Los cursores miden **149.997 ms** desde el primer pulso de `tau1` (D0, +9646 ms) hasta la subida de D3 (+9796 ms), que se queda arriba: el primer deadline perdido de `tau3`, a ≈ 150 ms como predijo la simulación. Los bloques anchos de D0–D3 antes de ≈ +9508 ms no son tareas: es el estado de los pines durante el arranque; en ≈ +9508 ms los cuatro bajan a la vez, que es lo que hace `instr_init()` (inferencia a partir del código, no medida aparte). La lectura de los cursores es de la imagen; no se exportó el VCD.
+Capturas de PulseView (Saleae Logic, 3 MHz, 50 M muestras, sin disparo; reset de la placa por RTS ≈ 8 s después de pulsar Run; las imágenes están en el commit `1e35db7`). Los cursores miden **149.997 ms** desde el primer pulso de `tau1` (D0, +9646 ms) hasta la subida de D3 (+9796 ms), que se queda arriba: el primer deadline perdido de `tau3`, a ≈ 150 ms como predijo la simulación. Los bloques anchos de D0–D3 antes de ≈ +9508 ms no son tareas: es el estado de los pines durante el arranque; en ≈ +9508 ms los cuatro bajan a la vez, que es lo que hace `instr_init()` (inferencia a partir del código, no medida aparte). La lectura de los cursores es de la imagen; no se exportó el VCD.
 
 La peor respuesta medida de `tau3` (170.054 ms) es mayor que los 160 ms de la RTA exacta para el primer trabajo: se debe, probablemente, al retraso acumulado de los trabajos posteriores, hipótesis que no se verificó con los datos de la captura.
 
 Bajo EDF el mismo conjunto cumple todos los deadlines: 0 fallos y la peor respuesta de `tau3` es **140.103 ms**, igual que los 140 ms de la simulación y por debajo de su deadline de 150 ms. Para `tau1` y `tau2` la peor respuesta sube respecto a RM (40.087 y 40.067 ms frente a 10.016 y 40.016 ms), porque EDF ya no les da prioridad fija; siguen dentro de sus deadlines.
 
-![Task A — EDF cumple](./img/lab06_taskA_edf_ok.png)
-
 PulseView con la misma configuración que RM (3 MHz, 50 M muestras, reset por RTS ≈ 8 s después de Run). El arranque, donde los cuatro canales bajan a la vez, queda en ≈ +5.6 s; desde ahí D0, D1 y D2 pulsan con regularidad y **D3 se queda abajo** en todo el tramo visible (≈ 4.5 s), sin la subida que en RM ocurría a ≈ 150 ms. El bloque alto de D3 al inicio es el estado de los pines durante el arranque, como en la captura de RM.
 
 **Verificación de la calibración:** `main` imprime `burn_ms(10) took 9999 us with nothing else running` (medido); debe ser ≈ 10 000 µs, y lo es. Si se desvía, los $C_i$ efectivos no son los de la tabla.
 
-### Task C — Jitter vs. control (el puente a teoría de control)
+### Task B — La inversión, luego la solución
+
+Tres hilos en `firmware/sched_labs`: `control` (alta), `slow` (baja, comando de consola lento) y `medium` (media, trabajo intenso que nunca toca el lock). `control` y `slow` comparten el lock. Cada episodio dura 100 ms: `slow` arranca en +0, `control` en +1 y `medium` en +2 ms. Escenarios (cada uno corre 30 s, con `-DCONFIG_SCHED_LAB_RUN_S=30`):
+
+```bash
+west build -p always -b esp32s3_devkitc/esp32s3/procpu firmware/sched_labs -- -DCONFIG_SCHED_LAB_NOLOCK=y    -DCONFIG_SCHED_LAB_RUN_S=30   # sin contención
+west build -p always -b esp32s3_devkitc/esp32s3/procpu firmware/sched_labs -- -DCONFIG_SCHED_LAB_INVERSION=y -DCONFIG_SCHED_LAB_RUN_S=30   # k_sem de 1
+west build -p always -b esp32s3_devkitc/esp32s3/procpu firmware/sched_labs -- -DCONFIG_SCHED_LAB_PI=y        -DCONFIG_SCHED_LAB_RUN_S=30   # k_mutex (herencia)
+```
+
+PulseView (Saleae Logic, 3 MHz, 50 M muestras, sin disparo; reset por RTS ≈ 8 s después de pulsar Run). Canales: D0 = `control` ocupado (GPIO4), D1 = `medium` (GPIO5), D2 = `slow` con el lock (GPIO6), D3 = `control` bloqueado esperando el lock (GPIO7).
+
+**Medido (consola, 301 episodios por escenario, deadline de `control` = 5 ms):**
+
+| Escenario | R máx de `control` | Espera máx del lock | Fallos de deadline | `slow` con el lock (tiempo de pared) |
+| :--- | :---: | :---: | :---: | :---: |
+| Sin contención | **1.013 ms** | 0.000 ms | 0 | 15.025 ms (*) |
+| `k_sem` (inversión) | **14.037 ms** | 13.029 ms | **301 de 301** | 14.022 ms |
+| `k_mutex` (herencia) | **4.038 ms** | 3.029 ms | 0 | **4.024 ms = B** |
+
+(*) Sin lock, `slow` no bloquea a nadie; esa cifra es solo su duración total, que incluye las preemptions de `control` y `medium` (4 + 1 + 10 ms).
+
+El resultado coincide con la predicción (1 ms / ≈ 14 ms con cota de 15 / ≤ 5 ms): con un semáforo binario, `medium` se interpone entre `slow` y `control` y la espera de `control` (13 ms) supera con creces la sección crítica de `slow`; con herencia de prioridad la espera se reduce a lo que dura esa sección.
+
+**Evidencia anotada** (cursores de PulseView):
+
+![Task B — sin contención](./img/lab06_taskB_nolock.png)
+
+Sin contención: los cursores miden **1.006 ms** en el pulso de D0 (`control`), `slow` (D2) empieza 1 ms antes, `medium` (D1) arranca cuando termina `control` y D3 queda plano abajo.
+
+![Task B — inversión con k_sem](./img/lab06_taskB_inversion.png)
+
+Inversión: D3 sube cuando `control` se bloquea y baja cuando toma el lock; los cursores miden **13.040 ms** entre ambos flancos (consola: 13.029 ms). Durante ese tramo `medium` (D1) corre ≈ 10 ms mientras `slow` (D2) tiene el lock, es decir, se interpone entre `slow` y `control`. `control` (D0) termina en ≈ 14 ms. Las duraciones de D1 y D0 son lecturas de la imagen, aproximadas; la de D3 es la medida por los cursores.
+
+![Task B — mutex con herencia de prioridad](./img/lab06_taskB_pi.png)
+
+Mutex con herencia: los cursores sobre D2 miden **4.024 ms** (= B, igual que el `max slow CS wall` de la consola). D3 sube ≈ 1 ms después y baja con D2, unos 3 ms; `medium` (D1) arranca justo cuando termina `control`, sin interponerse. Las duraciones de D0, D3 y D1 son lecturas de la imagen, aproximadas; la de D2 es la medida por los cursores.
+
+### Task C — Arreglarlo en la fuente (ADR-005)
+
+⏳ **Pendiente.** Requisitos de la guía:
+
+* **REQ-CONS-01.** `calib` necesita ≈ 400 ms de CPU dentro de un plazo de 1 s, en la prioridad más baja. Arreglo: `k_busy_wait(400)` → `k_usleep(400)` en `cmd_calib`. Hay que comprobar si 1000 esperas caben en 1 s: con el tick de 1 kHz de `firmware/kernel` (`CONFIG_SYS_CLOCK_TICKS_PER_SEC=1000`) cada `k_usleep` se redondea al tick de 1 ms (hipótesis, sin medir).
+* **REQ-ESTOP-01.** Tras la detección, la válvula solo se cierra cuando el siguiente `control` pone el duty en 0 y el paso PWM siguiente escribe el pin. Arreglo: poner también `duty_pct = 0` en la rama del e-stop de `task_sampling`. Suma del peor caso de los periodos frente a 5 ms.
+* **Medición «antes».** `instr_set(&instr_flow, estop);` tras el check de e-stop y un canal del analizador en la válvula (GPIO21); `set 3300` dispara el e-stop y `set 1500` y `clear` lo reponen.
+* **Evidencia:** filas antes/después, una captura del e-stop de cada una y las dos sumas. ADR-005 con las cifras.
+
+### Stretch (no calificado) — Jitter vs. control (el puente a teoría de control)
 
 **Inyección.** `CONFIG_LAB06_JITTER_MAX_MS=N` hace que cada ciclo de control espere un número entero de ms pseudoaleatorio en [0, N] **antes** de escribir el duty de la válvula (PRNG xorshift32 de semilla fija: cada corrida repite los mismos retardos). La ruta de e-stop nunca se retrasa. N = 0 compila la inyección fuera: es el lazo original.
 
@@ -154,7 +233,7 @@ Usar la planta sintética (sin `pot_esp32.overlay`): con el potenciómetro la pr
 
 ---
 
-## §4 Schedulability — Task B: ¿cabe la carga nueva?
+## §4 Tarea para la casa — Schedulability: ¿cabe la carga nueva?
 
 ### 4.1 El nodo real, con $C_i$ medidos
 
@@ -212,9 +291,10 @@ Ambos tests suficientes para RM fallan, así que **no deciden**; la simulación 
 
 ## §5 Checklist de evidencia pendiente
 
-- [x] `labs/img/lab06_taskA_rm_miss.png` y `labs/img/lab06_taskA_edf_ok.png`
-- [x] Resúmenes de consola de RM y EDF pegados en §3 Task A
-- [x] Línea `burn_ms(10) took … us` pegada (calibración): 9999 µs
-- [x] Tabla Task C con `loop_err_mv` medido para N = 0, 2, 5 (12 mV en los tres); la frase final se confirma para N ≤ 5 y N ≈ 30 sigue sin medirse
+- [x] Task A: capturas de RM y EDF del conjunto oficial (del compañero de pareja, atribuidas, sin anotar)
+- [ ] Task A: adaptar `firmware/sched_labs` a τ1/τ2, repetir RM y EDF en nuestra placa y el run de 60 s de EDF
+- [x] Task B: tres capturas anotadas (`lab06_taskB_nolock.png`, `lab06_taskB_inversion.png`, `lab06_taskB_pi.png`) y resúmenes de consola; B = 4.024 ms
+- [ ] Task C (ADR-005): `calib` con `k_usleep` y e-stop con `duty_pct = 0`, medición antes y después, capturas del e-stop, sumas y ADR-005
+- [x] Stretch: jitter inyectado N = 0, 2, 5 (12 / 12 / 12 mV); N ≈ 30 ms sigue siendo predicción
 - [ ] Parámetros de Daniela en §4.2 y U total
-- [ ] §1 completa
+- [ ] ADR-002 con B medido y sección de planificabilidad con la salida de `rta.py` frente a lo medido
