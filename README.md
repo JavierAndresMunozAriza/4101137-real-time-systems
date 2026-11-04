@@ -26,7 +26,7 @@ Este repositorio contiene las prácticas, arquitecturas de software e investigac
 | **03** | *The S3 Port and the First Thread* | `[x]` Completado | [lab03_port.md](labs/lab03_port.md) |
 | **04** | *Full Migration and A/B Testing* | `[x]` Completado | [lab04_ipc.md](labs/lab04_ipc.md) |
 | **05** | *Tracing & Per-Task Execution* | `[~]` Corrido en la placa (`threads` y trazas CTF) · capturas del analizador pendientes | [lab05_tracing.md](labs/lab05_tracing.md) |
-| **06** | *Schedulability Theory & RTA* | `[~]` Firmware, scripts e informe listos · capturas pendientes | [lab06_schedulability.md](labs/lab06_schedulability.md) |
+| **06** | *Schedulability Theory & RTA* | `[~]` Task A y C medidos en la placa · faltan los parámetros de Daniela (§4.2) | [lab06_schedulability.md](labs/lab06_schedulability.md) |
 | **07** | *Priority Inversion & Priority Inheritance* | `[~]` Firmware, script RTA e informe listos · capturas pendientes | [lab07_rta_inversion.md](labs/lab07_rta_inversion.md) |
 | **08-13** | *Advanced RTOS, Preempt RT & Project Kickoff* | `[ ]` Pendiente | [labs/](labs/) |
 

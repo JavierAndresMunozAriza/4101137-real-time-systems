@@ -5,7 +5,7 @@
 >
 > Referencia: Buttazzo, *Hard Real-Time Computing Systems* (4.ª ed.), cap. 4 · Firmware: `firmware/sched_labs/` y `firmware/kernel/` · Scripts: `tools/scripts/` · Placa: ESP32-S3 DevKitC.
 
-> **Estado de la evidencia:** el firmware compila en ambas variantes (RM y EDF) y las **predicciones** de abajo salen de scripts reproducibles; las capturas del analizador y las mediciones de lazo **aún no se toman**. Todo valor medido está marcado `⏳`. Ninguna cifra medida se estima ni se inventa; los valores *predichos* están rotulados como tales.
+> **Estado de la evidencia (2026-11-04):** el firmware corre en la placa en RM y EDF, y están medidos la Task A (consola y capturas de PulseView) y la Task C (`loop_err_mv` para N = 0, 2 y 5). **Quedan pendientes** solo los parámetros de los sensores de Daniela (§4.2) y el U total. Los valores *predichos* siguen rotulados como tales; ninguna cifra medida se estima.
 
 ---
 
