@@ -5,7 +5,7 @@
 >
 > Referencia: Buttazzo, *Hard Real-Time Computing Systems* (4.ª ed.), cap. 4 · Firmware: `firmware/sched_labs/` y `firmware/kernel/` · Scripts: `tools/scripts/` · Placa: ESP32-S3 DevKitC.
 
-> **Estado de la evidencia (2026-11-04):** la guía oficial vigente (repositorio del curso) pide la Task A con el conjunto real de la Fig. 4.13, la Task B (inversión de prioridad, tres capturas) y la Task C (ADR-005: `calib` y e-stop). **Task B medida en nuestra placa** (consola y tres capturas de PulseView). **Task A**: las capturas son del compañero de pareja (WaveForms); en nuestra placa se midió además un conjunto sintético de tres tareas. **Task C (ADR-005) pendiente.** El jitter inyectado (stretch, no calificado) está medido. Los valores *predichos* siguen rotulados como tales; ninguna cifra medida se estima.
+> **Estado de la evidencia (2026-11-04):** Task B y Task C medidas en nuestra placa (consola, capturas de PulseView y sesiones `.sr` en `labs/captures/`). La Task A usa las capturas del compañero de pareja para el conjunto oficial de la Fig. 4.13 (atribuidas) y, además, un conjunto sintético medido por nosotros. **Pendiente:** los parámetros de las tareas de Daniela (§4.2, no disponibles) y repetir la Task A oficial en nuestra placa. Los valores *predichos* siguen rotulados como tales; ninguna cifra medida se estima.
 
 ---
 
@@ -17,8 +17,9 @@
 | **Fig. 4.13 bajo EDF: fallos en 60 s** | 0 (U = 0.971 ≤ 1) | 0 en 60 s, **según el compañero de pareja**; no verificado por nosotros |
 | **R máx de `control`: sin contención / inversión (`k_sem`) / `k_mutex`** | 1 ms / ≈ 14 ms (cota 15) / ≤ 5 ms (esperado ≈ 4) | **1.013 ms / 14.037 ms (301 de 301 fallos) / 4.038 ms (0 fallos)**, consola de nuestra placa |
 | **B: sección crítica más larga de `slow`** | 4 ms | **4.024 ms** (ancho de D2 con `k_mutex`, cursores de PulseView, y consola) |
-| **`calib`: CPU y duración, antes y después del arreglo** | ⏳ | ⏳ (Task C, pendiente) |
-| **E-stop: detección → válvula baja, máx de 5 disparos, antes y después** | ⏳ | ⏳ (Task C, pendiente) |
+| **`calib`: CPU y duración, antes y después del arreglo** | antes ≈ 400 ms de CPU (400 µs × 1000 rondas); después ≈ 0 de CPU y 400 ms de reloj si `k_usleep` fuera exacto | **Antes: 405 ms de reloj y 387 ms de CPU. Después: 500 ms de reloj y 13 ms de CPU** (tick de 10 kHz; con 1 kHz eran 2 000 ms, fuera del plazo de 1 s) |
+| **E-stop: detección → válvula baja, máx de los disparos, antes y después** | antes ≤ 10 ms + 1 ms = 11 ms (periodo de `control` + paso PWM); después, dentro del mismo trabajo de `sampling` (µs) | **Antes: máx 10.005 ms (6 disparos, de 1.004 a 10.005 ms). Después: 4.0 µs (2 disparos)** |
+| **$C_i$ del nodo en el ESP32-S3** | no medidos antes (solo existían los del L476RG) | **`sampling` 11.7 µs, `control` 4.0 µs, telemetría 65 µs** (medianas; analizador a 3 MHz) |
 
 **Extras medidos (no son parte de la guía oficial):** conjunto sintético de tres tareas (U = 0.9667): RM pierde `tau3` a los 149.997 ms y EDF cumple; error del lazo con jitter inducido de 0 / 2 / 5 ms = 12 / 12 / 12 mV (stretch no calificado).
 
@@ -35,6 +36,30 @@
 * **Parámetros de la Fig. 4.13.** La guía oficial los da: τ1 (C = 2 ms, T = 5 ms) y τ2 (C = 4 ms, T = 7 ms), U = 0.971. Una versión anterior de la guía, la del repositorio, no los traía; con ella se hizo un conjunto sintético de tres tareas que se conserva como extra (§3). Escala del conjunto sintético: 1 unidad del libro = 10 ms.
 * **Parámetros de Daniela.** Las dos tareas nuevas "se dan en clase" y no están en el repo: §4 deja el cálculo parametrizado y calcula cuánta utilización caben, sin inventar sus valores.
 * **$C_i$ del nodo.** Los únicos $C_i$ registrados son los de la Semana 2 (L476RG, analizador lógico + PulseView). Los del ESP32-S3 se re-miden en el Lab 05.
+
+---
+
+## §2.1 Decisiones (ADR)
+
+### ADR-002 — Política de locks entre prioridades: `k_mutex`, no `k_sem`
+
+* **Status:** Accepted · **Date:** 2026-11-04 · **Deciders:** Real-Time Systems Engineering Team
+
+**Context.** `control` (alta) y `slow` (baja, comando de consola) comparten un lock; `medium` (media) nunca lo toca. Con un `k_sem` de 1, `medium` desaloja a `slow` mientras tiene el lock y `control` espera mucho más que la sección crítica (inversión de prioridad). Medido en nuestra placa (Task B): R máx de `control` = **14.037 ms** con `k_sem` (301 de 301 fallos, deadline de 5 ms), **4.038 ms** con `k_mutex` y 1.013 ms sin lock.
+
+**Decision.** Todo lock compartido entre prioridades distintas se implementa con `k_mutex` (herencia de prioridad). `k_sem` queda solo para señalizar. La sección crítica de la tarea de baja prioridad es la **B** del análisis: medida en **4.024 ms** (ancho de D2 con `k_mutex`, y consola).
+
+**Consequences & Costs.** R_control ≤ C + B = 1 + 4 = **5 ms** (RTA), igual al deadline: no hay margen, y lo medido (4.038 ms) queda por debajo porque `control` llega 1 ms después de que `slow` tomó el lock (§4.4). Cualquier aumento de B por encima de ≈ 4 ms hace perder el deadline; si el camino del e-stop necesita margen hay que acortar la sección crítica. Costo: la herencia añade trabajo al cambio de prioridad, no medido por separado.
+
+### ADR-005 — E-stop y `calib` arreglados en la fuente
+
+* **Status:** Accepted · **Date:** 2026-11-04 · **Deciders:** Real-Time Systems Engineering Team
+
+**Context.** (1) REQ-ESTOP-01: la válvula debe cerrarse en ≤ 5 ms tras la detección, pero solo se cerraba cuando corría `control` (cada 10 ms) y el paso PWM siguiente escribía el pin: peor caso 10 + 1 = **11 ms** y medido hasta **10.005 ms**. (2) REQ-CONS-01: `calib` usaba 387 ms de CPU de 405 ms con espera activa, a la prioridad más baja, y con las tareas de Daniela puede no caber en 1 s (§3 Task C).
+
+**Decision.** (1) `task_sampling` pone también `duty_pct = 0` al detectar el e-stop, de modo que su propio paso PWM baja la válvula en el mismo trabajo. (2) `cmd_calib` usa `k_usleep(400)` en lugar de `k_busy_wait(400)`, y el tick del sistema pasa de 1 kHz a **10 kHz** (`CONFIG_SYS_CLOCK_TICKS_PER_SEC=10000`): con 1 kHz cada `k_usleep(400)` se redondea a 2 ms y `calib` tardaba 2 000 ms.
+
+**Consequences & Costs.** E-stop: **4.0 µs** de detección a válvula baja (2 disparos, resolución 0.33 µs), frente a hasta 10.005 ms. `calib`: **13 ms de CPU** y 500 ms de reloj, frente a 387 ms y 405 ms. Costos: `calib` deja de ser la carga de CPU deliberada del A/B del Lab 04; el tick de 10 kHz afecta a toda la temporización del sistema y las mediciones de los Labs 05 y 06 anteriores a este cambio se tomaron a 1 kHz. Con el tick nuevo `lat_peak_us` siguió en 18 µs (una sola lectura); el resto de efectos no se midió.
 
 ---
 
@@ -186,12 +211,38 @@ Mutex con herencia: los cursores sobre D2 miden **4.024 ms** (= B, igual que el 
 
 ### Task C — Arreglarlo en la fuente (ADR-005)
 
-⏳ **Pendiente.** Requisitos de la guía:
+**Instrumentación.** Marcador `instr_estop` (GPIO18, D5): alto mientras el e-stop está enganchado, así que su flanco de subida es la detección; la válvula es GPIO21 (D4). Las capturas «antes» se tomaron con el marcador en GPIO15 (`instr_flow`, primera versión); se movió a un pin propio porque `instr_flow` marca el lote de flujo en otro hilo. Es el mismo código y el mismo costo. Sin pulsos en GPIO16 (la entrada de flujo está desconectada). Disparo: `set 3300` (la presión pasa de 3000 mV en ≈ 2 s) y luego `set 1500` y `clear`. Las sesiones de PulseView (`.sr`, 3 MHz, 50 M muestras) están en `labs/captures/`; los tiempos salen de `python3 tools/scripts/estop_latency.py <sesion.sr>`. Los títulos de las imágenes de PulseView dicen «Before.sr» en las dos de «después» porque la sesión conservaba ese nombre; los tiempos (≈ +2901 ms) son los de la captura de «después».
 
-* **REQ-CONS-01.** `calib` necesita ≈ 400 ms de CPU dentro de un plazo de 1 s, en la prioridad más baja. Arreglo: `k_busy_wait(400)` → `k_usleep(400)` en `cmd_calib`. Hay que comprobar si 1000 esperas caben en 1 s: con el tick de 1 kHz de `firmware/kernel` (`CONFIG_SYS_CLOCK_TICKS_PER_SEC=1000`) cada `k_usleep` se redondea al tick de 1 ms (hipótesis, sin medir).
-* **REQ-ESTOP-01.** Tras la detección, la válvula solo se cierra cuando el siguiente `control` pone el duty en 0 y el paso PWM siguiente escribe el pin. Arreglo: poner también `duty_pct = 0` en la rama del e-stop de `task_sampling`. Suma del peor caso de los periodos frente a 5 ms.
-* **Medición «antes».** `instr_set(&instr_flow, estop);` tras el check de e-stop y un canal del analizador en la válvula (GPIO21); `set 3300` dispara el e-stop y `set 1500` y `clear` lo reponen.
-* **Evidencia:** filas antes/después, una captura del e-stop de cada una y las dos sumas. ADR-005 con las cifras.
+**REQ-ESTOP-01 (la válvula cierra ≤ 5 ms tras la detección).**
+
+| | Disparos (detección → válvula baja) | Máx | Suma del peor caso (periodos) |
+| :--- | :--- | :---: | :---: |
+| **Antes** | 7.005, **10.005**, 2.004 ms (captura 1); 2.999, 1.004, 2.004 ms (captura 2) | **10.005 ms** | T_control (10 ms) + T_sampling (1 ms) = **11 ms** ✘ (> 5 ms) |
+| **Después** | 4.0 y 4.0 µs (2 disparos) | **4.0 µs** | trabajo de `sampling` (C máx ≈ 17 µs) ≈ **0.02 ms** ✔ |
+
+![E-stop antes: detección (D5) → válvula baja (D4) = 10.006 ms](./img/lab06_taskC_estop_before_zoom.png)
+
+![E-stop antes, vista general de los tres disparos](./img/lab06_taskC_estop_before.png)
+
+Antes: los cursores miden **10.006 ms** entre la subida de D5 y la bajada de D4 (el `.sr` da 10.005 ms). El valor depende de en qué punto del ciclo de 10 ms de `control` cae la detección, por eso los seis disparos van de 1.004 a 10.005 ms; el máximo se acerca al tope teórico de 11 ms.
+
+![E-stop después: 3.999 µs](./img/lab06_taskC_estop_after_zoom.png)
+
+![E-stop después, vista general](./img/lab06_taskC_estop_after.png)
+
+Después: los cursores miden **3.999 µs** y la bajada de D4 ocurre dentro del mismo pulso de D0 (el trabajo de `sampling`). Desde que la presión supera el umbral hay además hasta un periodo de muestreo (1 ms) hasta la detección: el extremo a extremo queda en ≲ 1.02 ms ✔.
+
+**Limitaciones.** El «después» tiene **2 disparos** y no 5: Run se pulsó tarde y el primer disparo ocurrió antes de que empezara la captura. El «antes» tiene 6.
+
+**REQ-CONS-01 (`calib` cabe en su plazo de 1 s en la prioridad más baja).** Medido con el tiempo de ejecución del propio hilo, 5 corridas iguales:
+
+| | Reloj | CPU del hilo | ¿Cabe en 1 s? |
+| :--- | :---: | :---: | :---: |
+| Antes (`k_busy_wait`) | 405 ms | **387 ms** | sí, si las demás tareas dejan ≥ 387 ms de CPU |
+| `k_usleep`, tick de 1 kHz | **2 000 ms** | 14–15 ms | **no**: cada sleep se redondea a 2 ms |
+| `k_usleep`, tick de 10 kHz (final) | **500 ms** | **13 ms** | sí |
+
+Durante `calib` las tareas de mayor prioridad usaron 405 − 387 = 18 ms (4.4 %). Con las tareas de Daniela (U_A + U_B, parámetros no disponibles) lo que queda a la consola es 1 − 0.044 − U_A − U_B: **antes** `calib` cabe solo si U_A + U_B ≤ **0.569** (387 ms de CPU); **después** necesita 13 ms de CPU y 500 ms de reloj, así que cabe hasta U_A + U_B ≈ **0.94**. Esa cuenta es aproximada: supone que la carga de mayor prioridad es constante.
 
 ### Stretch (no calificado) — Jitter vs. control (el puente a teoría de control)
 
@@ -254,7 +305,19 @@ Instrumento de cada $C_i$: analizador lógico + PulseView (GPIO), L476RG superlo
 * **EDF:** U ≤ 1 ✔
 * **Veredicto:** el nodo es planificable con RM; el test que lo respalda es Liu & Layland (suficiente y se cumple).
 
-**Salvedades.** (1) Son $C_i$ del L476RG: en el ESP32-S3 `telemetry` imprime por UART *polled* y bloquea ≈ 7 ms a 115200 (comentario en `main.c`), así que su $C_i$ real será mucho mayor que 45 µs (U_tele ≈ 0.007); se re-mide. (2) Los tests de utilización ignoran el bloqueo (Lab 07) y el deadline de 5 ms del e-stop, que exige análisis de tiempo de respuesta.
+**$C_i$ medidos en el ESP32-S3** (nodo `firmware/kernel`, tracing activo, tick de 1 kHz; ancho de los pulsos de D0, D1 y D3 en las sesiones «antes» de la Task C, resolución 0.33 µs; `python3 tools/scripts/sr_pulse_widths.py labs/captures/lab06_taskC_estop_before.sr`):
+
+| Tarea | $C_i$ mediana (µs) | $C_i$ máx (µs) | $T_i$ (µs) | $U_i$ (mediana) |
+| :--- | :---: | :---: | :---: | :---: |
+| Sampling | 11.7 | 17.0 | 1 000 | 0.011700 |
+| Control | 4.0 | 6.3 | 10 000 | 0.000400 |
+| Telemetry | 65 | 67.7 | 1 000 000 | 0.000065 |
+| ISR de flujo | *no medida* (no hay fuente de pulsos) | | 1 000 *(supuesto)* | 0.004200 *(supuesto del L476RG)* |
+| **U (S3, 3 tareas medidas)** | | | | **0.012165** |
+
+`python3 tools/scripts/sched_sim.py tests --tasks "sampling:11.7:1000,control:4.0:10000,telemetry:65:1000000"`: Liu & Layland (n = 3) cota 0.7798 ✔, hiperbólico 1.0122 ≤ 2 ✔, EDF ✔ → **planificable con RM**. Con los C_i máximos (U = 0.0177) el veredicto es el mismo. Con la ISR de flujo supuesta, U = 0.0164 (n = 4).
+
+**Salvedades.** (1) Los C_i del L476RG de la tabla anterior se conservan solo como referencia del Lab 02. El comentario de `main.c` dice que `telemetry` bloquea ≈ 7 ms en el `printk` por UART *polled*, pero el pin de telemetría, que cubre `snprintf` y `printk`, mide **65 µs** en esta configuración: no se observó ese bloqueo. (2) Los tests de utilización ignoran el bloqueo (Task B) y el deadline de 5 ms del e-stop, que exige análisis de tiempo de respuesta.
 
 ### 4.2 "Las dos tareas de Daniela"
 
@@ -271,7 +334,7 @@ python3 tools/scripts/sched_sim.py tests --preset node --extra "sensor_a:<C>:<T>
 | Sensor B | ⏳ ____ | ⏳ ____ | ⏳ ____ |
 | **U total (nodo + A + B)** | | | ⏳ ____ |
 
-**Regla de decisión (ya calculada):** las dos tareas caben **si U_A + U_B ≤ 0.7233** (Liu & Layland, condición suficiente). Si el total supera 0.7348, el hiperbólico puede aún aprobarlo; si ambos fallan y U ≤ 1, el conjunto no está decidido y se resuelve con RTA (Lab 07).
+**Regla de decisión (ya calculada):** las dos tareas caben **si U_A + U_B ≤ 0.7184** (con el nodo medido en el S3, U = 0.0164 incluida la ISR de flujo supuesta, n = 6, cota 0.7348; con el L476RG eran 0.7233) (Liu & Layland, condición suficiente). Si el total supera 0.7348, el hiperbólico puede aún aprobarlo; si ambos fallan y U ≤ 1, el conjunto no está decidido y se resuelve con RTA (Lab 07).
 
 ### 4.3 Por qué los tests suficientes no bastan: el conjunto de Task A
 
@@ -287,14 +350,28 @@ Ambos tests suficientes para RM fallan, así que **no deciden**; la simulación 
 
 > **FreeRTOS.** Solo trae prioridades fijas (no hay EDF en el kernel): Task A no es reproducible tal cual. Con U = 0.97 la respuesta profesional es rediseñar el conjunto hasta que pase el test de RM (o bajar U).
 
+### 4.4 RTA frente a lo medido (Task B)
+
+`python3 tools/scripts/rta.py --preset lab07-nolock|lab07-inversion|lab07-pi` (unidades: ms; `control` C = 1, `medium` C = 10, `slow` C = 4, deadline de `control` = 5):
+
+| Escenario | R de `control` según la RTA | Medido (máx de 301 episodios) | ¿Medido ≤ RTA? |
+| :--- | :---: | :---: | :---: |
+| Sin contención | 1 ms | 1.013 ms | ✔ (el 0.013 ms es sobrecarga de despacho) |
+| `k_sem` (inversión) | 15 ms (NO planificable) | 14.037 ms | ✔ |
+| `k_mutex` (herencia) | 5 ms = C + B | 4.038 ms | ✔ |
+
+**Por qué la captura de 30 s queda por debajo de la cota.** La RTA acota el peor desfase posible: `control` llegando justo cuando `slow` acaba de tomar el lock, con lo que espera toda la sección crítica B = 4 ms. El experimento repite el mismo episodio cada 100 ms, con `slow` en +0, `control` en +1 y `medium` en +2 ms, de modo que `control` siempre llega 1 ms después de que `slow` tomó el lock y espera 3 ms (4 − 1). Los 301 episodios son 301 muestras del **mismo** desfase y el máximo medido es ese valor, no el peor caso. Una captura más larga no lo cambia; habría que variar el desfase para alcanzar la cota.
+
 ---
 
-## §5 Checklist de evidencia pendiente
+## §5 Checklist de evidencia
 
 - [x] Task A: capturas de RM y EDF del conjunto oficial (del compañero de pareja, atribuidas, sin anotar)
 - [ ] Task A: adaptar `firmware/sched_labs` a τ1/τ2, repetir RM y EDF en nuestra placa y el run de 60 s de EDF
-- [x] Task B: tres capturas anotadas (`lab06_taskB_nolock.png`, `lab06_taskB_inversion.png`, `lab06_taskB_pi.png`) y resúmenes de consola; B = 4.024 ms
-- [ ] Task C (ADR-005): `calib` con `k_usleep` y e-stop con `duty_pct = 0`, medición antes y después, capturas del e-stop, sumas y ADR-005
+- [x] Task B: tres capturas anotadas y resúmenes de consola; B = 4.024 ms
+- [x] Task C (ADR-005): `calib` con `k_usleep` y e-stop con `duty_pct = 0`; «antes» (6 disparos) y «después» (2 disparos) con capturas y sumas; ADR-005
+- [ ] Task C: 3 disparos más «después» para llegar al máximo de 5 de la guía
 - [x] Stretch: jitter inyectado N = 0, 2, 5 (12 / 12 / 12 mV); N ≈ 30 ms sigue siendo predicción
-- [ ] Parámetros de Daniela en §4.2 y U total
-- [ ] ADR-002 con B medido y sección de planificabilidad con la salida de `rta.py` frente a lo medido
+- [x] ADR-002 con B medido (§2.1) y RTA frente a lo medido (§4.4)
+- [x] $C_i$ del nodo en el ESP32-S3 medidos y U con los tests (§4.1)
+- [ ] Parámetros de las tareas de Daniela en §4.2 y U total (datos de clase, no disponibles)
