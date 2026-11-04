@@ -182,7 +182,11 @@ Una escritura de D0 aparece 9.0 ms después de su `thread_switched_in` (valor m�
 
 **Contraste con GPIO.** D0 (`instr_samp`, GPIO4) sube al *entrar* a `task_sampling`; D1 (`instr_flow`, GPIO15) marca el cálculo por lotes en `flow_wq`. La ISR de flujo **no** tiene pin propio (es un único `atomic_inc`): su duración solo se lee en la traza (`isr_enter` → `isr_exit`). Captura de PulseView con D0 y D1 durante el mismo escenario:
 
-> **[CAPTURA PENDIENTE]** `labs/img/lab05_taskB_gpio.png` — latencia vista por GPIO: ⏳ ____ µs.
+![Task B — D0 (sampling), D1 (flow) y D2 (console) durante calib](./img/lab05_taskB_gpio.png)
+
+Captura de PulseView (Saleae Logic, 3 MHz, 50 M muestras, sin disparo; `calib` enviado ≈ 8 s después de pulsar Run). D2 (`console`, GPIO6) está en alto de +8079 ms a +8483 ms; los cursores de PulseView miden **403.5 ms** (lectura de cursores sobre la imagen). D0 (`sampling`, GPIO4) mantiene un tren denso de pulsos en toda la captura, también durante ese tramo, y D1 queda plana (no hay pulsos en GPIO16). Es la evidencia por GPIO de que `sampling` sigue corriendo mientras `console` ocupa la CPU, justo lo que la traza CTF no pudo registrar.
+
+**Límites:** no se exportó el VCD (esta versión de PulseView no ofrece la opción), así que el periodo y el jitter de D0 durante `calib` **no están cuantificados**, solo vistos en la imagen. Tampoco se midió la latencia ISR → hilo por GPIO: el firmware no tiene un pin en la ISR del tick.
 
 ### Task C — El precio de mirar
 
@@ -245,7 +249,7 @@ Indicador preliminar del costo, ya medido y sin sustituir al jitter de D0: con e
 - [ ] `labs/img/lab05_taskA_trace.png` — traza con hilos nombrados (requiere un visor de trazas)
 - [x] Salida real de `threads` pegada en §3 Task A
 - [ ] `labs/img/lab05_taskB_preemption.png` — preemption anotada (requiere un visor de trazas)
-- [ ] `labs/img/lab05_taskB_gpio.png` — D0/D1 en PulseView (requiere analizador lógico; D1 y el camino de flujo necesitan además pulsos en GPIO16)
+- [x] `labs/img/lab05_taskB_gpio.png` — D0/D1/D2 en PulseView — parcial: D2 de `calib` = 403.5 ms por cursores y D0 activo durante ese tramo; sin VCD, y D1/camino de flujo sin medir (faltan pulsos en GPIO16)
 - [x] Tabla t0–t3 de Task B con timestamps reales — parcial: t0, t2 y t3 medidos sobre `idle`; t1 (`isr_exit`) no se emite; la preemption de `console` no quedó registrada
 - [ ] `labs/img/lab05_taskC_off.png` y `lab05_taskC_on.png` (requiere analizador lógico)
 - [ ] Tabla §1 completa (4 filas) con los valores medidos — 3 de 4 filas; falta el jitter de la Task C
