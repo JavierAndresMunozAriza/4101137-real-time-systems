@@ -118,6 +118,7 @@ static const struct gpio_dt_spec instr_cons = INSTR(instr_cons);
 static const struct gpio_dt_spec instr_tele = INSTR(instr_tele);
 static const struct gpio_dt_spec instr_flow = INSTR(instr_flow);
 static const struct gpio_dt_spec instr_disp = INSTR(instr_disp);
+static const struct gpio_dt_spec instr_estop = INSTR(instr_estop);
 static const struct gpio_dt_spec valve_led =
 	GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios, {0});
 static const struct gpio_dt_spec flow_pulse =
@@ -416,6 +417,10 @@ static void task_sampling(void)
 	if (p > ESTOP_MV) {
 		atomic_set(&estop, 1); /* ...but the valve only reacts when control runs */
 	}
+	/* Analyzer marker: this pin is high while the e-stop is latched, so its rising edge
+	 * is the detection instant (Lab 06, Task C). It has its own pin: instr_flow marks the
+	 * flow batch on flow_wq and must not be driven from two threads. */
+	instr_set(&instr_estop, (int)atomic_get(&estop));
 
 	/* joystick, decimated to 50 Hz */
 	if (++joy_div >= JOY_EVERY) {
@@ -598,6 +603,11 @@ static void task_display(void)
  * thread, so the busy-wait is the point, not an accident. */
 static void cmd_calib(void)
 {
+	struct k_thread_runtime_stats before = { 0 };
+	struct k_thread_runtime_stats after = { 0 };
+	int64_t start_ms = k_uptime_get();
+	bool have_stats = k_thread_runtime_stats_get(k_current_get(), &before) == 0;
+
 	printk("calibrating zero-flow offset (%d rounds)...\n", CALIB_ROUNDS);
 	for (int i = 0; i < CALIB_ROUNDS; i++) {
 #if HAS_ADC
@@ -605,7 +615,18 @@ static void cmd_calib(void)
 #endif
 		k_busy_wait(CALIB_SETTLE_US);
 	}
-	printk("calibration done\n");
+	have_stats = have_stats && k_thread_runtime_stats_get(k_current_get(), &after) == 0;
+
+	/* Lab 06, Task C: wall time against the CPU this thread actually used. */
+	if (have_stats) {
+		printk("calibration done: wall %u ms, cpu %u ms\n",
+		       (uint32_t)(k_uptime_get() - start_ms),
+		       (uint32_t)k_cyc_to_ms_floor64(after.execution_cycles -
+						     before.execution_cycles));
+	} else {
+		printk("calibration done: wall %u ms, cpu n/a\n",
+		       (uint32_t)(k_uptime_get() - start_ms));
+	}
 }
 
 /* Mean |error| over the current window, mV (0 before the first control cycle). */
@@ -826,7 +847,7 @@ static int init_hw(void)
 	const struct gpio_dt_spec *outs[] = { &instr_samp, &instr_ctrl,
 					      &instr_cons, &instr_tele,
 					      &instr_flow, &instr_disp,
-					      &valve_led };
+					      &instr_estop, &valve_led };
 	int rc;
 
 	for (size_t i = 0; i < ARRAY_SIZE(outs); i++) {

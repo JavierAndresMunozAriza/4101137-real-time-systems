@@ -15,6 +15,7 @@ how long.
 | Telemetry (CSV line, 1 Hz) | Soft | PA6 | PB10 (D6) | GPIO7 | GPIO21 |
 | Flow batch math (every 100 pulses) | — | PA7 | PA8 (D7) | GPIO15 | GPIO22 |
 | Display HMI (optional, 2 Hz + on input) | Soft | PC14 | PA9 (D8) | GPIO17 | GPIO23 |
+| E-stop detection marker (high while latched; Lab 06 Task C, S3 only) | — | — | — | GPIO18 | — |
 
 On the Nucleo and both ESP32 devkits the six pins are consecutive on one header,
 so an 8-channel analyzer ribbon clips on in a single move. The Nucleo's run is

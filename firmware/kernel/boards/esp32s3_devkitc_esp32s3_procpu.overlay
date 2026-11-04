@@ -33,6 +33,7 @@
 		instr_tele: instr_tele { gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>; };
 		instr_flow: instr_flow { gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>; };
 		instr_disp: instr_disp { gpios = <&gpio0 17 GPIO_ACTIVE_HIGH>; };
+		instr_estop: instr_estop { gpios = <&gpio0 18 GPIO_ACTIVE_HIGH>; };  /* Lab 06 Task C: high while the e-stop is latched */
 	};
 
 	keys {
