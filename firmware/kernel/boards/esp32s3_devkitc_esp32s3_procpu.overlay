@@ -1,7 +1,7 @@
 /*
  * ESP32-S3-DevKitC-1 pin map. Only hardware description changes; the C does not.
  *
- * The six instrumentation pins sit together on the header so an 8-channel
+ * The seven instrumentation pins sit together on the header so an 8-channel
  * analyzer ribbon clips on in one go.
  *
  * Pressure comes from the synthetic plant until the pot is wired: build with

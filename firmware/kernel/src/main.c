@@ -415,7 +415,11 @@ static void task_sampling(void)
 
 	/* e-stop condition is *detected* here, at 1 kHz... */
 	if (p > ESTOP_MV) {
-		atomic_set(&estop, 1); /* ...but the valve only reacts when control runs */
+		atomic_set(&estop, 1);
+		/* ADR-005 (REQ-ESTOP-01): command the valve closed in this same job. The PWM
+		 * step below then drives the pin low now, instead of waiting for the next
+		 * control cycle (up to 10 ms) and the PWM step after it. */
+		atomic_set(&duty_pct, 0);
 	}
 	/* Analyzer marker: this pin is high while the e-stop is latched, so its rising edge
 	 * is the detection instant (Lab 06, Task C). It has its own pin: instr_flow marks the
@@ -597,10 +601,10 @@ static void task_display(void)
 
 /* ---- Console (firm): poll chars, run a full command synchronously --------- */
 
-/* `calib` is a deliberate CPU hog: it is the load the Lab 04 A/B test throws at
- * the node to prove the sampling thread is isolated from the console. It runs
- * once per explicit command (never periodically) on the lowest-priority user
- * thread, so the busy-wait is the point, not an accident. */
+/* `calib` runs once per explicit command (never periodically) on the lowest-priority
+ * user thread. ADR-005 (REQ-CONS-01): the settling time is slept, not busy-waited, so
+ * the rounds no longer burn the CPU the other tasks need. The Lab 04 A/B test used the
+ * old busy-wait version as its deliberate CPU load. */
 static void cmd_calib(void)
 {
 	struct k_thread_runtime_stats before = { 0 };
@@ -611,9 +615,10 @@ static void cmd_calib(void)
 	printk("calibrating zero-flow offset (%d rounds)...\n", CALIB_ROUNDS);
 	for (int i = 0; i < CALIB_ROUNDS; i++) {
 #if HAS_ADC
+		/* The read only paces each round like a real sample; calib keeps no value. */
 		(void)adc_read_mv(&adc_pressure);
 #endif
-		k_busy_wait(CALIB_SETTLE_US);
+		(void)k_usleep(CALIB_SETTLE_US); /* rounds up to the tick; the return value is the time left */
 	}
 	have_stats = have_stats && k_thread_runtime_stats_get(k_current_get(), &after) == 0;
 
