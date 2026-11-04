@@ -2,11 +2,13 @@
 """Measure ISR -> thread latency and context-switch gaps from decoded CTF text.
 
 A "tick wake-up" is a contiguous run of events:
-  isr_enter, timer_expiry_enter, msgq_put_enter, thread_sched_ready(sampling),
-  [msgq_put_exit, timer_expiry_exit, isr_exit*], thread_switched_out(X),
+  isr_enter, [timer_expiry_enter, msgq_put_enter,] thread_sched_ready(sampling),
+  [msgq_put_exit, timer_expiry_exit, isr_exit*,] thread_switched_out(X),
   thread_switched_in(sampling)
-with no other thread_switched_* between isr_enter and the switch, and every
-event inside one timestamp segment (no discontinuity marker in between).
+(bracketed events exist only when their trace classes are enabled; the final
+Lab 05 firmware traces THREAD, ISR, SEMAPHORE, QUEUE and IDLE.)
+There is no other thread_switched_* between isr_enter and the switch, and every
+event lies inside one timestamp segment (no discontinuity marker in between).
 
 usage: ctf_preempt_stats.py TRACE.txt [TRACE2.txt ...]   (EXAMPLE_X=idle to pick the printed example)
 """
@@ -18,6 +20,8 @@ from collections import defaultdict
 
 LINE = re.compile(r'^\[(\d+\.\d+)\] (\w+): \{ (.*) \}$')
 NAME = re.compile(r'name = "([^"]*)"')
+D0_GPIO = 4  # instr_samp: the pin sampling raises on entry (GPIO4, analyzer channel D0)
+D0_MASK = 1 << D0_GPIO  # the trace reports GPIO writes as a bit mask, so GPIO4 shows as "pins = 16"
 LOOKBACK = 14
 MAX_SPAN_NS = 200_000  # a wake-up sequence is far shorter than 200 us
 
@@ -66,7 +70,7 @@ def wakeups(segs):
                 continue
             isr_exit = next((seg[k][0] for k in range(j0 + 1, i - 1) if seg[k][1].startswith("isr_exit")), None)
             gpio = next((seg[k][0] for k in range(i + 1, min(i + 4, len(seg)))
-                         if seg[k][1] == "gpio_port_set_bits_raw_enter" and "pins = 16 " in seg[k][3] + " "), None)
+                         if seg[k][1] == "gpio_port_set_bits_raw_enter" and f"pins = {D0_MASK} " in seg[k][3] + " "), None)
             yield {"x": x, "t0": seg[j0][0], "ready": ready, "t1": isr_exit, "t2": t2, "t3": t3, "tg": gpio,
                    "block": seg[j0:i + 2]}
 
@@ -99,7 +103,7 @@ for x, ws in sorted(by_x.items(), key=lambda kv: -len(kv[1])):
     tg = [w["tg"] - w["t3"] for w in ws if w["tg"] is not None]
     print("  in->GPIO4 set (tg-t3):", summarize(tg) if tg else "n=0")
 
-EX_X = os.environ.get("EXAMPLE_X", "console")
+EX_X = os.environ.get("EXAMPLE_X") or max(by_x, key=lambda k: len(by_x[k]), default="")  # default: most frequent
 ex = by_x.get(EX_X, [])
 if ex:
     w = sorted(ex, key=lambda w: w["t3"] - w["t0"])[len(ex) // 2]

@@ -64,7 +64,7 @@ CONFIG_TRACING_BACKEND_UART=y
 * **Beneficio:** tracing completo sin comprar ni cablear nada; la consola queda intacta en el jack UART.
 * **Costo:** hay que conectar **los dos** cables USB-C (UART para la consola, USB para la traza) y elegir el `tty` de cada uno explícitamente (no usar `head -n 1`).
 * **Costo de CPU/RAM:** el modo activo es **asíncrono** (`CONFIG_TRACING_ASYNC=y`): un hilo de tracing propio (stack 1024 B) vacía un buffer circular de 2048 B. Ese hilo y el buffer son parte del "precio de mirar" (Task C).
-* **Eventos habilitados:** `THREAD`, `ISR`, `SEMAPHORE`, `QUEUE` e `IDLE`. Zephyr activa todas las demás clases por defecto: la primera captura en hardware contenía 21 y se desactivaron las otras dieciséis para que el firmware coincida con esta lista (`.config` verificado, commit `e424c15`).
+* **Eventos habilitados:** `THREAD`, `ISR`, `SEMAPHORE`, `QUEUE` e `IDLE`. Zephyr activa todas las demás clases por defecto: la primera captura en hardware contenía 21 y se desactivaron las otras dieciséis (`.config` verificado, commit `e424c15`). **Aun así la traza no se limita a esas cinco:** la captura A final contiene 5 456 eventos `gpio_port_*` de 12 582 (43 %) aunque `CONFIG_TRACING_GPIO` no está activo; su origen no se investigó.
 
 ---
 
